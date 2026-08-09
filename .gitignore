@@ -1,0 +1,26 @@
+# Local environments and operating-system files
+.DS_Store
+.venv*/
+__pycache__/
+*.py[cod]
+
+# Local design-session artifacts and runtime study records
+.superpowers/
+docs/superpowers/
+系统架构师知识库/学习档案/
+
+# Licensed / private source materials and machine-specific registries
+*.pdf
+*.wav
+系统架构师知识库/真题台账私有.json
+系统架构师知识库/02-真题索引/真题台账.csv
+系统架构师知识库/题库数据/待核对/*.json
+
+# Generated source-specific knowledge exports; regenerate locally from licensed sources
+系统架构师知识库/site/knowledge-data.js
+系统架构师知识库/01-知识点/
+系统架构师知识库/01-知识体系/
+系统架构师知识库/06-资料台账.md
+按章节拆分/
+2026下半年系统架构师备考资料/
+系统架构设计师-一本通精华知识点.txt

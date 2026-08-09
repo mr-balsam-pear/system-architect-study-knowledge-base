@@ -1,0 +1,12 @@
+[
+  {
+    "name": "软考达人",
+    "url": "https://ruankaodaren.com/exam/#/",
+    "collected_at": "2026-08-08",
+    "access": "restricted",
+    "note": "公开入口可访问，但题目接口包含签名及登录/会员状态处理；仅保留来源索引，不抓取或保存受限题目正文、答案与解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  }
+]

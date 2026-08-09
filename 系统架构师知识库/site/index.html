@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="系统架构设计师个人本地学习知识库">
+  <title>系统架构设计师 · 学习知识库</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">2026 下半年 · 个人备考中枢</p>
+      <h1>系统架构设计师学习知识库</h1>
+      <p class="lead">先读精炼结论，再按需展开教材文字层；把知识理解、真题练习和输出训练放进同一条学习路径。</p>
+      <div class="stats" aria-label="学习概况">
+        <div><strong id="countdown">—</strong><span>距 10 月 24 日</span></div>
+        <div><strong>18h</strong><span>每周稳定投入</span></div>
+        <div><strong id="record-count">—</strong><span>本机真题索引记录</span></div>
+      </div>
+      <nav aria-label="页面导航">
+        <a href="#study-dashboard">学习闭环</a>
+        <a href="#knowledge">直接学习</a>
+        <a href="#practice">互动题库</a>
+        <a href="#questions">真题索引</a>
+        <a href="#training">训练中心</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="today" class="section">
+      <div class="section-heading"><p class="eyebrow">任务优先</p><h2>本周执行路径</h2></div>
+      <div class="task-grid">
+        <article><h3>1. 定位专题</h3><p>按章节树进入具体小节：先看结论，再用原文补足细节。</p><a href="#knowledge">开始学习 →</a></article>
+        <article><h3>2. 真题输出</h3><p>选择年份与科目限时作答；答案只用于复盘而不是先看。</p><a href="#questions">筛选真题 →</a></article>
+        <article><h3>3. 案例与论文</h3><p>案例按得分点，论文按真实项目素材分别训练。</p><a href="../../2026下半年系统架构师备考资料/04-案例答题模板.md">进入输出训练 →</a></article>
+        <article><h3>4. 错题回炉</h3><p>记录错误根因，在 +3、+10、+28 天进行再复习。</p><a href="../../2026下半年系统架构师备考资料/06-错题本与复盘模板.md">进入复盘区 →</a></article>
+      </div>
+    </section>
+
+    <section id="study-dashboard" class="section">
+      <div class="section-heading"><p class="eyebrow">Markdown 为唯一档案</p><h2>学习闭环仪表盘</h2><p>所有记录只追加到本机 Markdown 周报与专题档案；这里展示汇总，不覆盖你的手工笔记。</p></div>
+      <p id="dashboard-state" class="muted" aria-live="polite">正在读取本机学习档案…</p>
+      <div class="dashboard-grid">
+        <article class="dashboard-card"><h3>今日复习</h3><strong id="due-review-count">—</strong><div id="due-review-list" class="dashboard-list"></div></article>
+        <article class="dashboard-card"><h3>近 7 天记录</h3><strong id="recent-record-count">—</strong><div id="recent-record-list" class="dashboard-list"></div></article>
+        <article class="dashboard-card"><h3>薄弱专题</h3><strong id="weak-topic-count">—</strong><div id="weak-topic-list" class="dashboard-list"></div></article>
+        <article class="dashboard-card"><h3>论文素材</h3><strong id="essay-material-count">—</strong><p class="muted">每条素材都应关联真实项目、决策、取舍与验证。</p><button id="record-essay-material" type="button" class="text-action">记录论文素材 →</button></article>
+      </div>
+    </section>
+
+    <section id="practice" class="section">
+      <div class="section-heading"><p class="eyebrow">先作答，再看解析</p><h2>互动题库</h2><p>只展示已人工核对的题目。选择题可即时判分；案例与论文按参考要点进行自评，不伪装成自动评分。</p></div>
+      <div class="practice-filters" aria-label="互动题库筛选">
+        <label>题型<select id="practice-type"><option value="">全部题型</option><option value="single_choice">选择题</option><option value="case_analysis">案例分析</option><option value="essay">论文</option></select></label>
+        <label>年份<select id="practice-year"><option value="">全部年份</option></select></label>
+        <label>科目<select id="practice-subject"><option value="">全部科目</option></select></label>
+        <label>知识点<select id="practice-knowledge"><option value="">全部知识点</option></select></label>
+      </div>
+      <p id="practice-state" class="muted" aria-live="polite">正在读取已核对题库…</p>
+      <div class="practice-layout">
+        <aside><div id="practice-list" class="practice-list" aria-label="已核对题目列表"></div></aside>
+        <article id="practice-reader" class="practice-reader" aria-live="polite"><p class="muted">选择左侧题目开始练习。</p></article>
+      </div>
+    </section>
+
+    <section id="knowledge" class="section knowledge-section">
+      <div class="section-heading">
+        <p class="eyebrow">教材优先 · 可直接学习</p><h2>知识点阅读器</h2>
+        <p>标题、摘要、标签和教材文字层均可搜索。原文来自当前工作区教材文字层整理，图、表和公式请回源 PDF 核对。</p>
+      </div>
+      <label class="knowledge-search">搜索知识点
+        <input id="knowledge-search" type="search" autocomplete="off" placeholder="例如：ATAM、黑板系统、微服务、论文摘要">
+      </label>
+      <div id="search-summary" class="muted" aria-live="polite"></div>
+      <div id="search-results" class="search-results" aria-live="polite"></div>
+      <div class="reader-layout">
+        <aside class="chapter-tree-wrap" aria-label="章节知识树"><div id="chapter-tree" class="chapter-tree"></div></aside>
+        <article id="knowledge-reader" class="knowledge-reader" aria-live="polite"></article>
+      </div>
+    </section>
+
+    <section id="questions" class="section">
+      <div class="section-heading"><p class="eyebrow">练习入口</p><h2>本机真题</h2><p>选择真题后可在本站预览已登记的本机 PDF，并查看从题目文字自动匹配出的关联知识点。资料不复制到本知识库。</p></div>
+      <div class="filters" aria-label="真题筛选">
+        <label>年份 <select id="year-filter"><option value="">全部年份</option></select></label>
+        <label>科目 <select id="subject-filter"><option value="">全部科目</option></select></label>
+        <label>类型 <select id="type-filter"><option value="">全部类型</option></select></label>
+      </div>
+      <p id="filter-summary" class="muted" aria-live="polite"></p>
+      <div id="question-list" class="record-list"></div>
+      <template id="record-template">
+        <article class="record">
+          <div><span class="tag year"></span><span class="tag subject"></span><span class="tag type"></span></div>
+          <h3></h3><p class="session muted"></p>
+          <div class="record-actions"><button type="button" class="open-question">查看题目与关联知识点</button></div>
+        </article>
+      </template>
+    </section>
+
+    <section id="training" class="section">
+      <div class="section-heading"><p class="eyebrow">限时输出</p><h2>训练中心</h2></div>
+      <div class="task-grid">
+        <article><h3>案例分析</h3><p>题干约束 → 每问关键词 → 风险/措施/验证 → 对照复盘。</p><button id="record-case" type="button" class="text-action">记录案例复盘 →</button><a href="../../2026下半年系统架构师备考资料/04-案例答题模板.md">案例答题模板 →</a></article>
+        <article><h3>论文写作</h3><p>真实项目素材 → 详细提纲 → 限时写作 → 五维反馈。</p><button id="record-essay" type="button" class="text-action">记录论文素材 →</button><a href="../../2026下半年系统架构师备考资料/05-论文项目素材库模板.md">论文素材模板 →</a></article>
+        <article><h3>模拟与机考</h3><p>每次模拟都包含限时、复盘和下一周的明确调整。</p><a href="../04-模拟与机考/README.md">模拟与机考说明 →</a></article>
+        <article><h3>资料台账</h3><p>查看本地资产、外部资料索引及版本/版权边界。</p><a href="../06-资料台账.md">打开资料台账 →</a></article>
+      </div>
+    </section>
+    <dialog id="question-dialog" class="question-dialog" aria-labelledby="question-title">
+      <div class="question-dialog-header">
+        <div><p id="question-meta" class="muted"></p><h2 id="question-title"></h2></div>
+        <button id="close-question" type="button" class="dialog-close">关闭</button>
+      </div>
+      <p id="question-state" class="muted" aria-live="polite"></p>
+      <div class="question-preview-layout">
+        <iframe id="question-pdf" title="真题 PDF 预览" referrerpolicy="no-referrer"></iframe>
+        <aside class="related-knowledge-panel"><h3>关联知识点</h3><div id="related-knowledge" class="related-knowledge"></div></aside>
+      </div>
+      <a id="open-question-tab" class="button" target="_blank" rel="noopener" hidden>在新标签打开 PDF</a>
+      <button id="record-question" type="button" class="button secondary">记录本次真题</button>
+    </dialog>
+    <dialog id="study-dialog" class="study-dialog" aria-labelledby="study-dialog-title">
+      <form id="study-form" method="dialog">
+        <div class="question-dialog-header"><div><p class="muted">只追加到本机 Markdown，不覆盖手工内容</p><h2 id="study-dialog-title">记录学习</h2></div><button id="close-study" type="button" class="dialog-close">关闭</button></div>
+        <p id="study-state" class="muted" aria-live="polite"></p>
+        <div class="study-form-grid">
+          <label>记录类型<select name="type" required><option>知识点学习</option><option>真题</option><option>案例</option><option>论文素材</option><option>错题复习</option></select></label>
+          <label>关联知识点<select id="study-knowledge-id" name="knowledge_id" required></select></label>
+          <label>标题 / 题源<input name="title" maxlength="200" placeholder="例如：2022 年下午案例第 2 题"></label>
+          <label>科目 / 来源<input name="subject" maxlength="80" placeholder="例如：案例分析"></label>
+          <label>结果<select name="result"><option value="">未填写</option><option>已掌握</option><option>基本掌握</option><option>未掌握</option><option>正确</option><option>错误</option><option>部分完成</option><option>待复习</option></select></label>
+          <label>错因<input name="error_type" maxlength="80" placeholder="概念混淆 / 审题遗漏"></label>
+          <label class="span-two">正确判断规则<input name="rule" maxlength="800" placeholder="不超过两句；下次遇到同类题如何判断"></label>
+          <label>下次复习日期<input name="review_date" type="date"></label>
+          <label>标签<input name="tags" maxlength="300" placeholder="用顿号或逗号分隔"></label>
+        </div>
+        <details class="full-review"><summary>完整复盘（按需填写）</summary><div class="study-form-grid">
+          <label class="span-two">题干依据<textarea name="prompt_evidence" maxlength="1200"></textarea></label>
+          <label>命中关键词<input name="hit_keywords" maxlength="600"></label><label>漏答关键词<input name="missed_keywords" maxlength="600"></label>
+          <label>用时<input name="duration" maxlength="40" placeholder="例如：25 分钟"></label><label>项目代号<input name="project_code" maxlength="120"></label>
+          <label class="span-two">关键决策<textarea name="decision" maxlength="1200"></textarea></label><label class="span-two">取舍<textarea name="tradeoff" maxlength="1200"></textarea></label><label class="span-two">验证 / 效果<textarea name="outcome" maxlength="1200"></textarea></label>
+          <label>原记录 ID<input name="original_record_id" maxlength="80"></label>
+        </div></details>
+        <div class="point-navigation"><button id="submit-study" type="submit" class="button">追加到学习档案</button></div>
+      </form>
+    </dialog>
+  </main>
+
+  <footer><div class="wrap">本地个人知识库。外部资料只作路径索引；请自行核验来源、版本、版权与使用权限。</div></footer>
+  <script src="data.js"></script>
+  <script src="knowledge-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "q002:choice-01",
+    "type": "single_choice",
+    "status": "verified",
+    "title": "2009 年下半年综合知识第 1 题｜软件层次",
+    "year": "2009",
+    "session": "下半年",
+    "subject": "综合知识",
+    "source": {
+      "kind": "local_pdf",
+      "source_id": "q002",
+      "label": "2009 年下半年系统架构设计师综合知识（本机登记 PDF）",
+      "url": ""
+    },
+    "knowledge_ids": ["2.3.2"],
+    "stem": "计算机系统中硬件层之上的软件通常按照三层来划分。图中的①②③分别表示哪一组？",
+    "options": [
+      {"label": "A", "text": "操作系统、应用软件和其他系统软件"},
+      {"label": "B", "text": "操作系统、其他系统软件和应用软件"},
+      {"label": "C", "text": "其他系统软件、操作系统和应用软件"},
+      {"label": "D", "text": "应用软件、其他系统软件和操作系统"}
+    ],
+    "answer": "B",
+    "explanation": "操作系统直接建立在硬件之上，是最基础的一层系统软件；编译器、数据库管理系统等其他系统软件依赖操作系统；应用软件建立在系统软件提供的平台之上。答案已与同年度答案解析 PDF 的第 1 题核对。",
+    "review_note": "题干和选项由 q002 文字层提取后人工校对；答案及解析依据 q003 同年度答案详解人工核对；2026-08-09。"
+  },
+  {
+    "id": "training-set-01:choice-01",
+    "type": "single_choice",
+    "status": "verified",
+    "title": "数据中心架构风格辨析",
+    "year": "2026",
+    "session": "训练",
+    "subject": "综合知识",
+    "source": {
+      "kind": "self_authored",
+      "source_id": "training-set-01",
+      "label": "知识库自编训练题",
+      "url": ""
+    },
+    "knowledge_ids": ["7.3.4"],
+    "stem": "某智能诊断系统需要让多个独立知识源围绕共享问题状态逐步推理，以处理复杂且难以预先分解的问题。下列哪种体系结构风格更贴切？",
+    "options": [
+      {"label": "A", "text": "固定顺序的批处理管道"},
+      {"label": "B", "text": "单一服务的同步调用"},
+      {"label": "C", "text": "黑板体系结构风格"},
+      {"label": "D", "text": "仅保存文件的仓库风格"}
+    ],
+    "answer": "C",
+    "explanation": "黑板风格通过黑板、独立知识源与控制机制协同求解复杂的非结构化问题；题干强调多知识源逐步推理，符合其典型适用场景。",
+    "review_note": "自编训练样例；2026-08-08 人工核对。"
+  }
+]
