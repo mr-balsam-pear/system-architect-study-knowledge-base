@@ -26,7 +26,7 @@ SECTION_RE = re.compile(r"^###\s+(\d+\.\d+)\s+(.+?)\s*$")
 SUBSECTION_RE = re.compile(r"^\s*-\s+(\d+(?:\.\d+){2,})\s+(.+?)\s*$")
 REVIEW_RE = re.compile(r"^\s*-\s+复习要点：\s*(.*)$")
 BODY_RE = re.compile(r"^\s*-\s+教材正文：\s*(.*)$")
-SOURCE_RE = re.compile(r"^>\s*来源：(.+)$")
+SOURCE_RE = re.compile(r"^>\s*来源：`?([^`；]+)`?")
 
 
 def natural_key(value: str) -> tuple[int, ...]:
