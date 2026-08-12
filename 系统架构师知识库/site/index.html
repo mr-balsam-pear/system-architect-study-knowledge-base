@@ -4,226 +4,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="系统架构设计师个人本地学习知识库">
-  <title>系统架构设计师 · 学习知识库</title>
+  <title>系统架构设计师 · 夜航指挥台</title>
   <script>
-    let savedTheme = null;
     try {
-      savedTheme = localStorage.getItem('system-architect-study-theme');
-    } catch (_) {}
-    let theme = 'light';
-    try {
-      theme = savedTheme === 'dark' || savedTheme === 'light'
-        ? savedTheme
-        : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    } catch (_) {}
-    document.documentElement.dataset.theme = theme;
+      const saved = localStorage.getItem('system-architect-study-theme');
+      document.documentElement.dataset.theme = saved === 'light' || saved === 'dark'
+        ? saved : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (_) { document.documentElement.dataset.theme = 'dark'; }
   </script>
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="command-header">
-    <div class="wrap">
-      <div class="command-bar">
-        <a class="command-brand" href="#today" aria-label="回到今日指挥台">
-          <span class="command-mark" aria-hidden="true">SA</span>
-          <span><strong>系统架构师 · 冲刺指挥台</strong><small>2026 H2 / LOCAL STUDY OS</small></span>
-        </a>
-        <div class="command-status">
-          <span class="exam-window"><i aria-hidden="true"></i><strong id="countdown">—</strong> · 10 月 24 日</span>
-          <button id="theme-toggle" type="button" class="theme-toggle" aria-pressed="false" aria-label="切换到黑夜模式">☀️ 白天</button>
-        </div>
-      </div>
-      <nav class="primary-nav" aria-label="页面导航">
-        <a href="#study-dashboard">学习闭环</a>
-        <a href="#knowledge">直接学习</a>
-        <a href="#practice">互动题库</a>
-        <a href="#questions">真题索引</a>
-        <a href="#training">训练中心</a>
+  <div class="app-shell">
+    <aside id="app-sidebar" class="app-sidebar" aria-label="学习工作区">
+      <a class="app-brand" href="#/today" aria-label="回到今日指挥台"><span aria-hidden="true">SA</span><strong>冲刺指挥台<small>LOCAL STUDY OS</small></strong></a>
+      <nav class="workspace-nav" aria-label="工作区导航">
+        <a data-route="today" href="#/today">今日指挥台</a>
+        <a data-route="knowledge" href="#/knowledge">知识点阅读器</a>
+        <a data-route="practice" href="#/practice">互动题库</a>
+        <a data-route="questions" href="#/questions">本机真题</a>
+        <a data-route="training" href="#/training">训练中心</a>
+        <a data-route="podcasts" href="#/podcasts">章节播客</a>
+        <a data-route="records" href="#/records">学习档案</a>
       </nav>
-    </div>
-  </header>
+      <div class="sidebar-status"><span><i aria-hidden="true"></i><b id="countdown">—</b> · 10 月 24 日</span><button id="theme-toggle" data-theme-toggle type="button" class="theme-toggle" aria-pressed="false" aria-label="切换到黑夜模式">☀️ 白天</button></div>
+    </aside>
+    <header class="mobile-bar"><a href="#/today">SA · 冲刺指挥台</a><button id="workspace-menu" type="button" aria-controls="workspace-drawer" aria-expanded="false">工作区 ☰</button></header>
+    <main id="workspace-root" class="workspace-root" tabindex="-1" aria-live="polite"></main>
+  </div>
 
-  <main class="wrap">
-    <section id="today" class="command-hero" aria-labelledby="command-title">
-      <div class="command-intro">
-        <p class="eyebrow">WEEKLY FOCUS / LOCAL STUDY</p>
-        <h1 id="command-title">今天只完成一个得分闭环。</h1>
-        <p>复习 → 限时训练 → 写下下一次判断规则。碎片时间交给章节播客。</p>
-        <div class="command-facts" aria-label="学习概况">
-          <span><strong>18h</strong> 每周稳定投入</span>
-          <span><strong id="record-count">—</strong> 条本机真题索引</span>
-        </div>
-      </div>
-      <div class="command-grid">
-        <article class="work-panel mission-sequence">
-          <div class="panel-heading"><h2>今日任务序列</h2><span>READY</span></div>
-          <button id="mission-review" class="mission-step" type="button"><b>01</b><span><strong>清空今天到期的复习</strong><small>遮住答案，先复述判断规则。</small></span><i>→</i></button>
-          <button id="mission-practice" class="mission-step" type="button"><b>02</b><span><strong>完成一组限时训练</strong><small>用题库验证本周弱项。</small></span><i>→</i></button>
-          <button id="mission-rule" class="mission-step" type="button"><b>03</b><span><strong>留下一个可执行规则</strong><small>只记录下次如何判断。</small></span><i>→</i></button>
-        </article>
-        <aside class="work-panel command-podcast">
-          <div class="panel-heading"><h2>碎片时间</h2><span>AUDIO</span></div>
-          <span class="podcast-glyph" aria-hidden="true">◖))</span>
-          <h3>章节播客</h3>
-          <p>18 期节目，覆盖第 2–20 章；播放不会自动写入学习档案。</p>
-          <button id="open-podcast-workspace" type="button" class="primary-action">打开节目库</button>
-        </aside>
-      </div>
-    </section>
+  <dialog id="workspace-drawer" class="workspace-drawer" aria-label="选择工作区"><button type="button" class="drawer-close" data-close-drawer>关闭</button><nav aria-label="移动端工作区导航"></nav></dialog>
+  <dialog id="study-dialog" class="study-dialog" aria-labelledby="study-dialog-title"></dialog>
+  <section id="podcast-mini-player" class="podcast-mini-player" hidden aria-label="章节播客迷你播放器"></section>
+  <audio id="podcast-audio" preload="metadata"></audio>
 
-    <section id="study-dashboard" class="section workspace-section">
-      <div class="workspace-heading"><p class="eyebrow">Markdown 为唯一档案</p><h2>学习闭环仪表盘</h2><p>所有记录只追加到本机 Markdown 周报与专题档案；这里展示汇总，不覆盖你的手工笔记。</p></div>
-      <p id="dashboard-state" class="muted" aria-live="polite">正在读取本机学习档案…</p>
-      <div class="dashboard-grid">
-        <article class="dashboard-card dashboard-card-primary"><h3>今日复习</h3><strong id="due-review-count">—</strong><div id="due-review-list" class="dashboard-list"></div></article>
-        <article class="dashboard-card"><h3>近 7 天记录</h3><strong id="recent-record-count">—</strong><div id="recent-record-list" class="dashboard-list"></div></article>
-        <article class="dashboard-card"><h3>薄弱专题</h3><strong id="weak-topic-count">—</strong><div id="weak-topic-list" class="dashboard-list"></div></article>
-        <article class="dashboard-card dashboard-card-action"><h3>论文素材</h3><strong id="essay-material-count">—</strong><p class="muted">每条素材都应关联真实项目、决策、取舍与验证。</p><button id="record-essay-material" type="button" class="text-action">记录论文素材 →</button></article>
-      </div>
-    </section>
-
-    <section id="podcast-workspace" class="section workspace-section podcast-workspace" hidden aria-labelledby="podcast-workspace-title">
-      <div class="podcast-workspace-header">
-        <div><p class="eyebrow">冲刺指挥台 · 二级工作区</p><h2 id="podcast-workspace-title">章节播客</h2><p id="podcast-count" class="muted">正在读取本机节目…</p></div>
-        <button id="close-podcast-workspace" type="button" class="podcast-control">返回冲刺指挥台</button>
-      </div>
-      <div class="podcast-layout">
-        <aside class="podcast-library">
-          <label class="podcast-filter"><input id="podcast-only-incomplete" type="checkbox"> 仅显示未听完</label>
-          <div id="podcast-list" class="podcast-list" aria-label="章节节目列表"></div>
-        </aside>
-        <article class="podcast-player-panel">
-          <p id="podcast-chapter-label" class="eyebrow">尚未选择节目</p>
-          <h3 id="podcast-current-title">选择一章开始收听</h3>
-          <p id="podcast-current-progress" class="muted">进度 00:00</p>
-          <audio id="podcast-audio" controls preload="metadata"></audio>
-          <p id="podcast-state" class="muted" aria-live="polite">播放进度只保存在当前浏览器。</p>
-          <div class="podcast-actions">
-            <button id="podcast-primary-action" type="button" class="button" disabled>开始收听</button>
-            <button id="podcast-open-knowledge" type="button" class="podcast-control" disabled>进入本章知识点</button>
-            <button id="podcast-record" type="button" class="podcast-control" disabled>记录本章收听 / 复盘</button>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section id="practice" class="section workspace-section">
-      <div class="workspace-heading"><p class="eyebrow">先作答，再看解析</p><h2>互动题库</h2><p>只展示已人工核对的题目。选择题可即时判分；案例与论文按参考要点进行自评，不伪装成自动评分。</p></div>
-      <div class="practice-filters" aria-label="互动题库筛选">
-        <label>题型<select id="practice-type"><option value="">全部题型</option><option value="single_choice">选择题</option><option value="case_analysis">案例分析</option><option value="essay">论文</option></select></label>
-        <label>年份<select id="practice-year"><option value="">全部年份</option></select></label>
-        <label>科目<select id="practice-subject"><option value="">全部科目</option></select></label>
-        <label>来源<select id="practice-source"><option value="">全部来源</option></select></label>
-        <label>知识点<select id="practice-knowledge"><option value="">全部知识点</option></select></label>
-      </div>
-      <div class="practice-session-controls">
-        <label>模式<select id="practice-mode"><option value="single">单题沉浸</option><option value="paper">选择题整卷</option></select></label>
-        <label>限时（分钟）<input id="practice-limit" type="number" min="0" max="240" value="0"></label>
-        <button id="practice-start" class="button" type="button">开始 / 重置会话</button>
-        <span id="practice-progress">进度 0 / 0</span><strong id="practice-timer" aria-live="polite">00:00</strong>
-      </div>
-      <p id="practice-state" class="muted" aria-live="polite">正在读取已核对题库…</p>
-      <div class="practice-layout">
-        <aside><div id="practice-card" class="practice-card" aria-label="答题卡"></div><div id="practice-list" class="practice-list" aria-label="已核对题目列表"></div></aside>
-        <article id="practice-reader" class="practice-reader" aria-live="polite"><p class="muted">选择左侧题目开始练习。</p></article>
-      </div>
-    </section>
-
-    <section id="knowledge" class="section workspace-section knowledge-section">
-      <div class="workspace-heading">
-        <p class="eyebrow">教材优先 · 可直接学习</p><h2>知识点阅读器</h2>
-        <p>标题、摘要、标签和教材文字层均可搜索。原文来自当前工作区教材文字层整理，图、表和公式请回源 PDF 核对。</p>
-      </div>
-      <label class="knowledge-search">搜索知识点
-        <input id="knowledge-search" type="search" autocomplete="off" placeholder="例如：ATAM、黑板系统、微服务、论文摘要">
-      </label>
-      <div id="search-summary" class="muted" aria-live="polite"></div>
-      <div id="search-results" class="search-results" aria-live="polite"></div>
-      <div class="reader-layout">
-        <aside class="chapter-tree-wrap" aria-label="章节知识树"><div id="chapter-tree" class="chapter-tree"></div></aside>
-        <article id="knowledge-reader" class="knowledge-reader" aria-live="polite"></article>
-      </div>
-    </section>
-
-    <section id="questions" class="section workspace-section">
-      <div class="workspace-heading"><p class="eyebrow">练习入口</p><h2>本机真题</h2><p>选择真题后可在本站预览已登记的本机 PDF，并查看从题目文字自动匹配出的关联知识点。资料不复制到本知识库。</p></div>
-      <div class="filters" aria-label="真题筛选">
-        <label>年份 <select id="year-filter"><option value="">全部年份</option></select></label>
-        <label>科目 <select id="subject-filter"><option value="">全部科目</option></select></label>
-        <label>类型 <select id="type-filter"><option value="">全部类型</option></select></label>
-      </div>
-      <p id="filter-summary" class="muted" aria-live="polite"></p>
-      <div id="question-list" class="record-list"></div>
-      <template id="record-template">
-        <article class="record">
-          <div><span class="tag year"></span><span class="tag subject"></span><span class="tag type"></span></div>
-          <h3></h3><p class="session muted"></p>
-          <div class="record-actions"><button type="button" class="open-question">查看题目与关联知识点</button></div>
-        </article>
-      </template>
-    </section>
-
-    <section id="training" class="section workspace-section">
-      <div class="workspace-heading"><p class="eyebrow">限时输出</p><h2>训练中心</h2></div>
-      <div class="task-grid">
-        <article><h3>案例分析</h3><p>题干约束 → 每问关键词 → 风险/措施/验证 → 对照复盘。</p><button id="record-case" type="button" class="text-action">记录案例复盘 →</button><a href="../../2026下半年系统架构师备考资料/04-案例答题模板.md">案例答题模板 →</a></article>
-        <article><h3>论文写作</h3><p>真实项目素材 → 详细提纲 → 限时写作 → 五维反馈。</p><button id="record-essay" type="button" class="text-action">记录论文素材 →</button><a href="../../2026下半年系统架构师备考资料/05-论文项目素材库模板.md">论文素材模板 →</a></article>
-        <article><h3>模拟与机考</h3><p>每次模拟都包含限时、复盘和下一周的明确调整。</p><a href="../04-模拟与机考/README.md">模拟与机考说明 →</a></article>
-        <article><h3>资料台账</h3><p>查看本地资产、外部资料索引及版本/版权边界。</p><a href="../06-资料台账.md">打开资料台账 →</a></article>
-      </div>
-    </section>
-    <dialog id="question-dialog" class="question-dialog" aria-labelledby="question-title">
-      <div class="question-dialog-header">
-        <div><p id="question-meta" class="muted"></p><h2 id="question-title"></h2></div>
-        <button id="close-question" type="button" class="dialog-close">关闭</button>
-      </div>
-      <p id="question-state" class="muted" aria-live="polite"></p>
-      <div class="question-preview-layout">
-        <iframe id="question-pdf" title="真题 PDF 预览" referrerpolicy="no-referrer"></iframe>
-        <aside class="related-knowledge-panel"><h3>关联知识点</h3><div id="related-knowledge" class="related-knowledge"></div></aside>
-      </div>
-      <a id="open-question-tab" class="button" target="_blank" rel="noopener" hidden>在新标签打开 PDF</a>
-      <button id="record-question" type="button" class="button secondary">记录本次真题</button>
-    </dialog>
-    <dialog id="study-dialog" class="study-dialog" aria-labelledby="study-dialog-title">
-      <form id="study-form" method="dialog">
-        <div class="question-dialog-header"><div><p class="muted">只追加到本机 Markdown，不覆盖手工内容</p><h2 id="study-dialog-title">记录学习</h2></div><button id="close-study" type="button" class="dialog-close">关闭</button></div>
-        <p id="study-state" class="muted" aria-live="polite"></p>
-        <div class="study-form-grid">
-          <label>记录类型<select name="type" required><option>知识点学习</option><option>真题</option><option>案例</option><option>论文素材</option><option>错题复习</option></select></label>
-          <label>关联知识点<select id="study-knowledge-id" name="knowledge_id" required></select></label>
-          <label>标题 / 题源<input name="title" maxlength="200" placeholder="例如：2022 年下午案例第 2 题"></label>
-          <label>科目 / 来源<input name="subject" maxlength="80" placeholder="例如：案例分析"></label>
-          <label>结果<select name="result"><option value="">未填写</option><option>已掌握</option><option>基本掌握</option><option>未掌握</option><option>正确</option><option>错误</option><option>部分完成</option><option>待复习</option></select></label>
-          <label>错因<input name="error_type" maxlength="80" placeholder="概念混淆 / 审题遗漏"></label>
-          <label class="span-two">正确判断规则<input name="rule" maxlength="800" placeholder="不超过两句；下次遇到同类题如何判断"></label>
-          <label>下次复习日期<input name="review_date" type="date"></label>
-          <label>标签<input name="tags" maxlength="300" placeholder="用顿号或逗号分隔"></label>
-        </div>
-        <details class="full-review"><summary>完整复盘（按需填写）</summary><div class="study-form-grid">
-          <label class="span-two">题干依据<textarea name="prompt_evidence" maxlength="1200"></textarea></label>
-          <label>命中关键词<input name="hit_keywords" maxlength="600"></label><label>漏答关键词<input name="missed_keywords" maxlength="600"></label>
-          <label>用时<input name="duration" maxlength="40" placeholder="例如：25 分钟"></label><label>项目代号<input name="project_code" maxlength="120"></label>
-          <label class="span-two">关键决策<textarea name="decision" maxlength="1200"></textarea></label><label class="span-two">取舍<textarea name="tradeoff" maxlength="1200"></textarea></label><label class="span-two">验证 / 效果<textarea name="outcome" maxlength="1200"></textarea></label>
-          <label>原记录 ID<input name="original_record_id" maxlength="80"></label>
-        </div></details>
-        <div class="point-navigation"><button id="submit-study" type="submit" class="button">追加到学习档案</button></div>
-      </form>
-    </dialog>
-  </main>
-
-  <section id="podcast-mini-player" class="podcast-mini-player" hidden aria-label="章节播客迷你播放器">
-    <div><strong id="podcast-mini-title">章节播客</strong><span id="podcast-mini-status">已暂停 · 00:00</span></div>
-    <button id="podcast-mini-toggle" type="button" class="podcast-mini-button" aria-label="播放当前播客">播放</button>
-    <button id="podcast-mini-expand" type="button" class="podcast-mini-button">展开节目库</button>
-  </section>
-
-  <footer><div class="wrap">本地个人知识库。外部资料只作路径索引；请自行核验来源、版本、版权与使用权限。</div></footer>
   <script src="data.js"></script>
   <script src="knowledge-data.js"></script>
   <script src="practice-state.js"></script>
   <script src="podcast-state.js"></script>
+  <script src="router.js"></script>
+  <script src="workspace-state.js"></script>
+  <script src="workspaces/today.js"></script>
+  <script src="workspaces/knowledge.js"></script>
+  <script src="workspaces/practice.js"></script>
+  <script src="workspaces/questions.js"></script>
+  <script src="workspaces/question-detail.js"></script>
+  <script src="workspaces/training.js"></script>
+  <script src="workspaces/podcasts.js"></script>
+  <script src="workspaces/records.js"></script>
+  <script src="dialogs.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

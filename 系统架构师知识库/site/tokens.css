@@ -42,6 +42,11 @@
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
   --radius-pill: 999px;
+  --sidebar-width: 14rem;
+  --mobile-bar-height: 4rem;
+  --content-max: 78rem;
+  --z-sidebar: 30;
+  --z-overlay: 60;
   --dur-short: 160ms;
   --dur-medium: 260ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

@@ -6,6 +6,10 @@ const siteRoot = path.resolve(__dirname, '..', 'site');
 const read = name => fs.readFileSync(path.join(siteRoot, name), 'utf8');
 const html = read('index.html');
 const css = read('styles.css');
+const shellCss = read(path.join('styles', 'app-shell.css'));
+const workspaceCss = read(path.join('styles', 'workspaces.css'));
+const overlayCss = read(path.join('styles', 'overlays.css'));
+const combinedCss = [css, shellCss, workspaceCss, overlayCss].join('\n');
 const app = read('app.js');
 const tokens = fs.existsSync(path.join(siteRoot, 'tokens.css')) ? read('tokens.css') : '';
 
@@ -26,10 +30,10 @@ assert.match(tokens, /--font-display:/);
 assert.match(tokens, /--space-md:/);
 assert.match(tokens, /:root\[data-theme="dark"\]/);
 assert.match(css, /^\/\* Hallmark · genre: atmospheric · macrostructure: Workbench/m);
-assert.match(css, /overflow-x:\s*clip/);
-assert.match(css, /@media\s*\(max-width:\s*48rem\)/);
-assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
-assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b|rgba?\(/, 'component CSS must use tokens');
+assert.match(combinedCss, /overflow-x:\s*clip/);
+assert.match(combinedCss, /@media\s*\(max-width:\s*48rem\)/);
+assert.match(combinedCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+assert.doesNotMatch(combinedCss, /#[0-9a-fA-F]{3,8}\b|rgba?\(/, 'component CSS must use tokens');
 assert.match(app, /renderRoute/);
 assert.match(app, /updateActiveNavigation/);
 
