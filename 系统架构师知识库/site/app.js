@@ -68,7 +68,7 @@
     document.documentElement.dataset.theme = activeTheme;
     themeToggle.textContent = activeTheme === 'dark' ? '🌙 黑夜' : '☀️ 白天';
     themeToggle.setAttribute('aria-pressed', String(activeTheme === 'dark'));
-    themeToggle.setAttribute('aria-label', '黑夜模式');
+    themeToggle.setAttribute('aria-label', activeTheme === 'dark' ? '切换到白天模式' : '切换到黑夜模式');
   }
   function toggleTheme() {
     const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
