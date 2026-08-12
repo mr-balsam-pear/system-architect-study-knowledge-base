@@ -35,6 +35,16 @@
   let practiceTicker = 0;
   let previewRequestId = 0;
   let previewController = null;
+  const podcastStorageKey = 'system-architect-podcast-progress-v1';
+  const podcastWorkspace = document.getElementById('podcast-workspace');
+  const podcastList = document.getElementById('podcast-list');
+  const podcastAudio = document.getElementById('podcast-audio');
+  const podcastState = document.getElementById('podcast-state');
+  const podcastMini = document.getElementById('podcast-mini-player');
+  let podcasts = [];
+  let activePodcast = null;
+  let podcastProgress = readPodcastProgress();
+  let lastPodcastSave = 0;
 
   function systemTheme() {
     try {
@@ -94,7 +104,109 @@
     else field('knowledge_id').value = knowledgeRecords[0]?.id || '';
     field('title').value = context.title || '';
     field('subject').value = context.subject || context.source || '';
+    field('tags').value = context.tags || '';
     if (!studyDialog.open) studyDialog.showModal();
+  }
+
+  function readPodcastProgress() {
+    try { return PodcastState.parseProgress(localStorage.getItem(podcastStorageKey)); }
+    catch (_) { return PodcastState.emptyProgress(); }
+  }
+  function persistPodcastProgress() {
+    if (!activePodcast || !activePodcast.available) return;
+    const duration = Number.isFinite(podcastAudio.duration) ? podcastAudio.duration : activePodcast.duration_seconds;
+    podcastProgress = PodcastState.savePosition(podcastProgress, activePodcast.chapter, podcastAudio.currentTime, duration);
+    try { localStorage.setItem(podcastStorageKey, JSON.stringify(podcastProgress)); }
+    catch (_) { podcastState.textContent = '当前浏览器无法保存进度，但仍可继续播放。'; }
+    renderPodcastList(); updatePodcastUi();
+  }
+  function podcastForChapter(chapter) { return podcasts.find(item => item.chapter === String(chapter)); }
+  function firstKnowledgeInChapter(chapter) { return knowledgeRecords.find(record => String(record.chapter) === String(chapter)); }
+  function podcastProgressLabel(item) {
+    if (!item.available) return '本章暂无播客';
+    if (PodcastState.isFinished(podcastProgress, item.chapter)) return '本章已听完';
+    const position = PodcastState.savedPosition(podcastProgress, item.chapter);
+    return position ? `已听 ${PodcastState.formatSeconds(position)} / ${PodcastState.formatSeconds(item.duration_seconds)}` : `时长 ${PodcastState.formatSeconds(item.duration_seconds)}`;
+  }
+  function renderPodcastList() {
+    if (!podcastList) return;
+    const onlyIncomplete = document.getElementById('podcast-only-incomplete').checked;
+    const visible = PodcastState.filterPodcasts(podcasts, podcastProgress, onlyIncomplete);
+    podcastList.replaceChildren();
+    visible.forEach(item => {
+      const button = element('button', `podcast-item ${activePodcast?.chapter === item.chapter ? 'active' : ''}`); button.type = 'button';
+      button.append(element('strong', '', `第${item.chapter}章 · ${item.title}`), element('span', '', podcastProgressLabel(item)));
+      if (!item.available) button.classList.add('unavailable');
+      button.addEventListener('click', () => selectPodcast(item.chapter, false)); podcastList.append(button);
+    });
+  }
+  function openPodcastWorkspace() {
+    podcastWorkspace.hidden = false;
+    renderPodcastList();
+    podcastWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function closePodcastWorkspace() {
+    podcastWorkspace.hidden = true;
+    document.getElementById('study-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function updatePodcastUi() {
+    if (!activePodcast) return;
+    const position = podcastAudio.currentTime || PodcastState.savedPosition(podcastProgress, activePodcast.chapter);
+    const duration = Number.isFinite(podcastAudio.duration) ? podcastAudio.duration : activePodcast.duration_seconds;
+    const finished = PodcastState.isFinished(podcastProgress, activePodcast.chapter);
+    document.getElementById('podcast-current-progress').textContent = finished ? '本章已听完' : `进度 ${PodcastState.formatSeconds(position)} / ${PodcastState.formatSeconds(duration)}`;
+    const primary = document.getElementById('podcast-primary-action');
+    primary.textContent = podcastAudio.paused ? (position ? `继续收听 · ${PodcastState.formatSeconds(position)}` : finished ? '重播本章' : '开始收听') : '暂停播放';
+    document.getElementById('podcast-mini-title').textContent = `第${activePodcast.chapter}章 · ${activePodcast.title}`;
+    document.getElementById('podcast-mini-status').textContent = `${podcastAudio.paused ? '已暂停' : '播放中'} · ${PodcastState.formatSeconds(position)} / ${PodcastState.formatSeconds(duration)}`;
+    const miniToggle = document.getElementById('podcast-mini-toggle'); miniToggle.textContent = podcastAudio.paused ? '播放' : '暂停'; miniToggle.setAttribute('aria-label', `${podcastAudio.paused ? '播放' : '暂停'}第${activePodcast.chapter}章播客`);
+  }
+  async function togglePodcastPlayback() {
+    if (!activePodcast?.available) return;
+    if (!podcastAudio.paused) { podcastAudio.pause(); return; }
+    try { await podcastAudio.play(); podcastState.textContent = '正在播放；进度只保存在当前浏览器。'; }
+    catch (_) { podcastState.textContent = '浏览器未允许播放。请再点击播放，或检查本机音频设置。'; }
+    updatePodcastUi();
+  }
+  function selectPodcast(chapter, shouldPlay) {
+    const item = podcastForChapter(chapter); if (!item) return;
+    if (activePodcast?.chapter !== item.chapter && !podcastAudio.paused) podcastAudio.pause();
+    activePodcast = item;
+    document.getElementById('podcast-chapter-label').textContent = `第${item.chapter}章 · ${item.available ? '本机节目' : '暂无节目'}`;
+    document.getElementById('podcast-current-title').textContent = item.title;
+    const canOpenKnowledge = Boolean(firstKnowledgeInChapter(item.chapter));
+    document.getElementById('podcast-open-knowledge').disabled = !canOpenKnowledge;
+    document.getElementById('podcast-record').disabled = !item.available || !canOpenKnowledge;
+    document.getElementById('podcast-primary-action').disabled = !item.available;
+    if (!item.available) {
+      podcastAudio.removeAttribute('src'); podcastAudio.load(); podcastMini.hidden = true;
+      podcastState.textContent = '本章暂无播客，可继续使用知识点阅读与练习。';
+    } else {
+      const source = `/api/podcasts/${encodeURIComponent(item.chapter)}/audio`;
+      if (podcastAudio.getAttribute('src') !== source) { podcastAudio.src = source; podcastAudio.load(); }
+      podcastMini.hidden = false; podcastState.textContent = '播放进度只保存在当前浏览器。';
+      podcastProgress.lastChapter = item.chapter;
+      try { localStorage.setItem(podcastStorageKey, JSON.stringify(podcastProgress)); } catch (_) {}
+      if (shouldPlay) togglePodcastPlayback();
+    }
+    renderPodcastList(); updatePodcastUi();
+  }
+  async function loadPodcasts() {
+    try {
+      const response = await fetch('/api/podcasts', { headers: { Accept: 'application/json' } }); const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload.podcasts)) throw new Error();
+      podcasts = payload.podcasts; const available = podcasts.filter(item => item.available).length;
+      document.getElementById('podcast-count').textContent = `${available} 期可收听 · 共 20 章；第 1、4 章暂无节目。`;
+      selectPodcast(podcastForChapter(podcastProgress.lastChapter)?.chapter || podcasts.find(item => item.available)?.chapter, false);
+    } catch (_) { document.getElementById('podcast-count').textContent = '未连接本地学习服务，节目库暂不可用。'; }
+  }
+  function addReaderPodcast(record) {
+    const item = podcastForChapter(record.chapter);
+    const card = element('section', `reader-podcast-card ${item?.available ? '' : 'unavailable'}`);
+    if (!item?.available) { card.append(element('strong', '', '本章暂无播客'), element('span', '', '可继续使用知识点阅读与练习。')); reader.append(card); return; }
+    card.append(element('strong', '', `本章播客 · ${item.title}`), element('span', '', podcastProgressLabel(item)));
+    const button = element('button', 'podcast-control', PodcastState.savedPosition(podcastProgress, item.chapter) ? '继续收听' : '播放本章播客'); button.type = 'button';
+    button.addEventListener('click', () => { selectPodcast(item.chapter, true); }); card.append(button); reader.append(card);
   }
   function dashboardItem(record, label) {
     const button = element('button', 'dashboard-item'); button.type = 'button';
@@ -274,6 +386,7 @@
     reader.replaceChildren();
     reader.append(element('p', 'breadcrumb', `第${record.chapter}章 ${record.chapter_title}  ·  ${record.section} ${record.section_title}`));
     reader.append(element('h3', 'point-title', `${record.id} ${record.title}`));
+    addReaderPodcast(record);
     const summary = element('section', 'summary-card'); summary.append(element('h4', '', '核心结论')); summary.append(element('p', '', record.summary)); reader.append(summary);
     reader.append(element('h4', 'reader-heading', '结构化理解'));
     const structured = element('div', 'structured-grid'); Object.entries(record.structured).forEach(([label, text]) => { const card = element('section', 'structured-card'); card.append(element('h4', '', label)); card.append(element('p', '', text)); structured.append(card); }); reader.append(structured);
@@ -403,8 +516,23 @@
   document.getElementById('record-case').addEventListener('click', () => openStudyRecord({ type: '案例', title: '案例分析复盘', subject: '案例分析' }));
   document.getElementById('record-essay').addEventListener('click', () => openStudyRecord({ type: '论文素材', title: '论文项目素材', subject: '论文' }));
   document.getElementById('record-essay-material').addEventListener('click', () => openStudyRecord({ type: '论文素材', title: '论文项目素材', subject: '论文' }));
+  document.getElementById('open-podcast-workspace').addEventListener('click', openPodcastWorkspace);
+  document.getElementById('close-podcast-workspace').addEventListener('click', closePodcastWorkspace);
+  document.getElementById('podcast-only-incomplete').addEventListener('change', renderPodcastList);
+  document.getElementById('podcast-primary-action').addEventListener('click', togglePodcastPlayback);
+  document.getElementById('podcast-mini-toggle').addEventListener('click', togglePodcastPlayback);
+  document.getElementById('podcast-mini-expand').addEventListener('click', openPodcastWorkspace);
+  document.getElementById('podcast-open-knowledge').addEventListener('click', () => { const record = firstKnowledgeInChapter(activePodcast?.chapter); if (record) setKnowledge(record.id, true); });
+  document.getElementById('podcast-record').addEventListener('click', () => { const record = firstKnowledgeInChapter(activePodcast?.chapter); if (!record || !activePodcast?.available) return; openStudyRecord({ type: '知识点学习', knowledgeId: record.id, title: `第${activePodcast.chapter}章播客｜${activePodcast.title}`, subject: '章节播客', tags: `章节播客、第${activePodcast.chapter}章` }); });
+  podcastAudio.addEventListener('loadedmetadata', () => { const position = PodcastState.savedPosition(podcastProgress, activePodcast?.chapter); if (position && position < podcastAudio.duration - 5) podcastAudio.currentTime = position; updatePodcastUi(); });
+  podcastAudio.addEventListener('play', updatePodcastUi);
+  podcastAudio.addEventListener('pause', () => { persistPodcastProgress(); updatePodcastUi(); });
+  podcastAudio.addEventListener('ended', () => { persistPodcastProgress(); podcastState.textContent = '本章已听完；可重播或主动记录复盘。'; });
+  podcastAudio.addEventListener('error', () => { if (activePodcast?.available) podcastState.textContent = '本机播客文件不可用，你仍可进入本章知识点。'; });
+  podcastAudio.addEventListener('timeupdate', () => { updatePodcastUi(); if (Date.now() - lastPodcastSave >= 5000) { lastPodcastSave = Date.now(); persistPodcastProgress(); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) persistPodcastProgress(); });
   questionDialog.addEventListener('close', invalidateQuestionPreview);
   questionDialog.addEventListener('cancel', invalidateQuestionPreview);
   window.addEventListener('popstate', () => { const id = readHash(); if (recordById.has(id)) { renderReader(id); renderTree(); } });
-  document.getElementById('record-count').textContent = questionRecords.length; populateStudyKnowledge(); countdown(); setupQuestions(); renderTree(); renderReader(recordById.has(readHash()) ? readHash() : knowledgeRecords[0]?.id); searchKnowledge(); refreshDashboard(); loadPracticeCatalog();
+  document.getElementById('record-count').textContent = questionRecords.length; populateStudyKnowledge(); countdown(); setupQuestions(); renderTree(); loadPodcasts().finally(() => renderReader(recordById.has(readHash()) ? readHash() : knowledgeRecords[0]?.id)); searchKnowledge(); refreshDashboard(); loadPracticeCatalog();
 }());

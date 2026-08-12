@@ -63,6 +63,32 @@
         <article class="dashboard-card"><h3>近 7 天记录</h3><strong id="recent-record-count">—</strong><div id="recent-record-list" class="dashboard-list"></div></article>
         <article class="dashboard-card"><h3>薄弱专题</h3><strong id="weak-topic-count">—</strong><div id="weak-topic-list" class="dashboard-list"></div></article>
         <article class="dashboard-card"><h3>论文素材</h3><strong id="essay-material-count">—</strong><p class="muted">每条素材都应关联真实项目、决策、取舍与验证。</p><button id="record-essay-material" type="button" class="text-action">记录论文素材 →</button></article>
+        <article class="dashboard-card podcast-entry-card"><h3>章节播客</h3><strong>18 期</strong><p class="muted">通勤、碎片时间或章节回顾时收听；播放不会自动写学习档案。</p><button id="open-podcast-workspace" type="button" class="text-action">打开节目库 →</button></article>
+      </div>
+    </section>
+
+    <section id="podcast-workspace" class="section podcast-workspace" hidden aria-labelledby="podcast-workspace-title">
+      <div class="podcast-workspace-header">
+        <div><p class="eyebrow">冲刺指挥台 · 二级工作区</p><h2 id="podcast-workspace-title">章节播客</h2><p id="podcast-count" class="muted">正在读取本机节目…</p></div>
+        <button id="close-podcast-workspace" type="button" class="podcast-control">返回冲刺指挥台</button>
+      </div>
+      <div class="podcast-layout">
+        <aside class="podcast-library">
+          <label class="podcast-filter"><input id="podcast-only-incomplete" type="checkbox"> 仅显示未听完</label>
+          <div id="podcast-list" class="podcast-list" aria-label="章节节目列表"></div>
+        </aside>
+        <article class="podcast-player-panel">
+          <p id="podcast-chapter-label" class="eyebrow">尚未选择节目</p>
+          <h3 id="podcast-current-title">选择一章开始收听</h3>
+          <p id="podcast-current-progress" class="muted">进度 00:00</p>
+          <audio id="podcast-audio" controls preload="metadata"></audio>
+          <p id="podcast-state" class="muted" aria-live="polite">播放进度只保存在当前浏览器。</p>
+          <div class="podcast-actions">
+            <button id="podcast-primary-action" type="button" class="button" disabled>开始收听</button>
+            <button id="podcast-open-knowledge" type="button" class="podcast-control" disabled>进入本章知识点</button>
+            <button id="podcast-record" type="button" class="podcast-control" disabled>记录本章收听 / 复盘</button>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -171,10 +197,17 @@
     </dialog>
   </main>
 
+  <section id="podcast-mini-player" class="podcast-mini-player" hidden aria-label="章节播客迷你播放器">
+    <div><strong id="podcast-mini-title">章节播客</strong><span id="podcast-mini-status">已暂停 · 00:00</span></div>
+    <button id="podcast-mini-toggle" type="button" class="podcast-mini-button" aria-label="播放当前播客">播放</button>
+    <button id="podcast-mini-expand" type="button" class="podcast-mini-button">展开节目库</button>
+  </section>
+
   <footer><div class="wrap">本地个人知识库。外部资料只作路径索引；请自行核验来源、版本、版权与使用权限。</div></footer>
   <script src="data.js"></script>
   <script src="knowledge-data.js"></script>
   <script src="practice-state.js"></script>
+  <script src="podcast-state.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
