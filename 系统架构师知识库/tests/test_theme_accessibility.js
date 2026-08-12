@@ -8,6 +8,12 @@ const app = fs.readFileSync(path.join(siteRoot, 'app.js'), 'utf8');
 
 assert.match(
   html,
+  /href="tokens\.css"[\s\S]*href="styles\.css"/,
+  '设计令牌必须先于组件样式加载',
+);
+
+assert.match(
+  html,
   /id="theme-toggle"[^>]+aria-pressed="false"[^>]+aria-label="切换到黑夜模式"/,
   '初始浅色主题应说明按钮将切换到黑夜模式',
 );
