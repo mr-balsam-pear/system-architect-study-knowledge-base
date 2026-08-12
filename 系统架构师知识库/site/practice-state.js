@@ -34,5 +34,44 @@
       accuracy: results.length ? Math.round(correct * 100 / results.length) : 0, results,
       weakKnowledge: Object.entries(weak).sort((a, b) => b[1] - a[1]).map(([knowledgeId, count]) => ({ knowledgeId, count })) };
   }
-  return { createSession, setAnswer, progress, remainingSeconds, formatSeconds, summarize };
+  function immutableCopy(value) {
+    if (!value || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return Object.freeze(value.map(immutableCopy));
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, immutableCopy(item)])));
+  }
+  function submitSnapshot(session, questions, now = Date.now()) {
+    const copiedQuestions = questions.filter(item => item.type === 'single_choice').map(item => Object.freeze({
+      id: item.id, title: item.title, answer: item.answer, explanation: item.explanation || '',
+      options: Object.freeze((item.options || []).map(option => Object.freeze({ label: option.label, text: option.text }))),
+      knowledge_ids: Object.freeze([...(item.knowledge_ids || [])]), type: item.type,
+    }));
+    const snapshot = { answers: immutableCopy(session.answers), questions: Object.freeze(copiedQuestions), startedAt: session.startedAt, finishedAt: now };
+    const summary = summarize(snapshot, copiedQuestions);
+    snapshot.summary = Object.freeze({ ...summary, results: Object.freeze(summary.results.map(Object.freeze)),
+      weakKnowledge: Object.freeze(summary.weakKnowledge.map(Object.freeze)) });
+    return Object.freeze(snapshot);
+  }
+  function reviewData(snapshot, questionId) {
+    const question = snapshot.questions.find(item => item.id === questionId);
+    if (!question) return null;
+    const selected = snapshot.answers[questionId] || '';
+    return { id: question.id, title: question.title, selected, answer: question.answer, correct: Boolean(selected) && selected === question.answer,
+      explanation: question.explanation, options: question.options.map(option => ({ ...option, selected: option.label === selected, correct: option.label === question.answer })) };
+  }
+  function caseRecordIntent(question, answers) {
+    const incomplete = answers.filter(answer => answer.rating !== '已覆盖');
+    return { type: '案例', result: incomplete.length ? '部分完成' : '基本掌握',
+      promptEvidence: answers.map(answer => `${answer.item.id}[${answer.rating}]：${String(answer.text || '').trim() || '未作答'}`).join(' | ').slice(0, 1200),
+      hitKeywords: answers.filter(answer => answer.rating === '已覆盖').map(answer => answer.item.id).join('、').slice(0, 600),
+      missedKeywords: incomplete.flatMap(answer => answer.item.reference_points || []).join('、').slice(0, 600),
+      errorType: incomplete.length ? '要点覆盖不足' : '', rule: question.explanation || '' };
+  }
+  function essayRecordIntent(values) {
+    return { type: '论文素材', result: '待复习', promptEvidence: `摘要：${values.abstract || ''}\n项目背景：${values.project || ''}`.slice(0, 1200),
+      projectCode: String(values.project_code || '').slice(0, 120), decision: String(values.solution || '').slice(0, 1200),
+      tradeoff: String(values.tradeoff || '').slice(0, 1200), outcome: String(values.outcome || '').slice(0, 1200),
+      missedKeywords: String(values.body || '').slice(0, 600), rule: String(values.solution || '').slice(0, 800) };
+  }
+  function recordIntent(action) { return action ? { ...action } : null; }
+  return { createSession, setAnswer, progress, remainingSeconds, formatSeconds, summarize, submitSnapshot, reviewData, caseRecordIntent, essayRecordIntent, recordIntent };
 }));
