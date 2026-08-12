@@ -42,5 +42,19 @@
     if (!onlyIncomplete) return [...podcasts];
     return podcasts.filter(item => !item.available || !isFinished(progress, item.chapter));
   }
-  return { emptyProgress, parseProgress, savePosition, savedPosition, isFinished, formatSeconds, filterPodcasts };
+  function playerView(item, progress, paused, positionSeconds, durationSeconds) {
+    if (!item?.available) return { showAudio: false, showPrimary: false, showRecord: false, progressText: '本章暂无播客', primaryText: '', miniText: '', playing: false };
+    const finished = isFinished(progress, item.chapter);
+    const position = Math.max(0, Number(positionSeconds) || 0);
+    const duration = Math.max(0, Number(durationSeconds) || item.duration_seconds || 0);
+    const playing = !paused;
+    return {
+      showAudio: true, showPrimary: true, showRecord: true, playing,
+      progressText: finished ? '本章已听完' : `进度 ${formatSeconds(position)} / ${formatSeconds(duration)}`,
+      primaryText: playing ? '暂停播放' : finished ? '重播本章' : position ? `继续收听 · ${formatSeconds(position)}` : '开始收听',
+      miniText: `${playing ? '播放中' : '已暂停'} · ${finished ? '本章已听完' : `${formatSeconds(position)} / ${formatSeconds(duration)}`}`,
+    };
+  }
+  function playIntentOnSelection(wasPlaying, available) { return Boolean(wasPlaying && available); }
+  return { emptyProgress, parseProgress, savePosition, savedPosition, isFinished, formatSeconds, filterPodcasts, playerView, playIntentOnSelection };
 }));

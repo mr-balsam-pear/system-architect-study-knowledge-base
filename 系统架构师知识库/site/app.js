@@ -155,12 +155,14 @@
     if (!activePodcast) return;
     const position = podcastAudio.currentTime || PodcastState.savedPosition(podcastProgress, activePodcast.chapter);
     const duration = Number.isFinite(podcastAudio.duration) ? podcastAudio.duration : activePodcast.duration_seconds;
-    const finished = PodcastState.isFinished(podcastProgress, activePodcast.chapter);
-    document.getElementById('podcast-current-progress').textContent = finished ? '本章已听完' : `进度 ${PodcastState.formatSeconds(position)} / ${PodcastState.formatSeconds(duration)}`;
+    const view = PodcastState.playerView(activePodcast, podcastProgress, podcastAudio.paused, position, duration);
+    document.getElementById('podcast-current-progress').textContent = view.progressText;
     const primary = document.getElementById('podcast-primary-action');
-    primary.textContent = podcastAudio.paused ? (position ? `继续收听 · ${PodcastState.formatSeconds(position)}` : finished ? '重播本章' : '开始收听') : '暂停播放';
+    primary.hidden = !view.showPrimary; primary.textContent = view.primaryText;
+    podcastAudio.hidden = !view.showAudio;
+    document.getElementById('podcast-record').hidden = !view.showRecord;
     document.getElementById('podcast-mini-title').textContent = `第${activePodcast.chapter}章 · ${activePodcast.title}`;
-    document.getElementById('podcast-mini-status').textContent = `${podcastAudio.paused ? '已暂停' : '播放中'} · ${PodcastState.formatSeconds(position)} / ${PodcastState.formatSeconds(duration)}`;
+    document.getElementById('podcast-mini-status').textContent = view.miniText;
     const miniToggle = document.getElementById('podcast-mini-toggle'); miniToggle.textContent = podcastAudio.paused ? '播放' : '暂停'; miniToggle.setAttribute('aria-label', `${podcastAudio.paused ? '播放' : '暂停'}第${activePodcast.chapter}章播客`);
   }
   async function togglePodcastPlayback() {
@@ -172,7 +174,10 @@
   }
   function selectPodcast(chapter, shouldPlay) {
     const item = podcastForChapter(chapter); if (!item) return;
-    if (activePodcast?.chapter !== item.chapter && !podcastAudio.paused) podcastAudio.pause();
+    const changed = activePodcast?.chapter !== item.chapter;
+    const wasPlaying = changed && !podcastAudio.paused;
+    const keepPlaying = PodcastState.playIntentOnSelection(wasPlaying, item.available);
+    if (wasPlaying) podcastAudio.pause();
     activePodcast = item;
     document.getElementById('podcast-chapter-label').textContent = `第${item.chapter}章 · ${item.available ? '本机节目' : '暂无节目'}`;
     document.getElementById('podcast-current-title').textContent = item.title;
@@ -189,7 +194,7 @@
       podcastMini.hidden = false; podcastState.textContent = '播放进度只保存在当前浏览器。';
       podcastProgress.lastChapter = item.chapter;
       try { localStorage.setItem(podcastStorageKey, JSON.stringify(podcastProgress)); } catch (_) {}
-      if (shouldPlay) togglePodcastPlayback();
+      if (shouldPlay || keepPlaying) togglePodcastPlayback();
     }
     renderPodcastList(); updatePodcastUi();
   }
@@ -554,7 +559,7 @@
   podcastAudio.addEventListener('loadedmetadata', () => { const position = PodcastState.savedPosition(podcastProgress, activePodcast?.chapter); if (position && position < podcastAudio.duration - 5) podcastAudio.currentTime = position; updatePodcastUi(); });
   podcastAudio.addEventListener('play', updatePodcastUi);
   podcastAudio.addEventListener('pause', () => { persistPodcastProgress(); updatePodcastUi(); });
-  podcastAudio.addEventListener('ended', () => { persistPodcastProgress(); podcastState.textContent = '本章已听完；可重播或主动记录复盘。'; });
+  podcastAudio.addEventListener('ended', () => { persistPodcastProgress(); updatePodcastUi(); podcastState.textContent = '本章已听完；可重播或主动记录复盘。'; });
   podcastAudio.addEventListener('error', () => { if (activePodcast?.available) podcastState.textContent = '本机播客文件不可用，你仍可进入本章知识点。'; });
   podcastAudio.addEventListener('timeupdate', () => { updatePodcastUi(); if (Date.now() - lastPodcastSave >= 5000) { lastPodcastSave = Date.now(); persistPodcastProgress(); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) persistPodcastProgress(); });
