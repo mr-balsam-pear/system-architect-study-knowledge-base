@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import html
 import re
 import shutil
 from collections import OrderedDict
@@ -34,6 +35,18 @@ def natural_key(value: str) -> tuple[int, ...]:
 
 def safe_name(value: str) -> str:
     return value.replace("/", "-")
+
+
+def markdown_destination(value: str) -> str:
+    """用 Markdown 的尖括号目标语法包裹相对路径。
+
+    这能让含半角括号的知识点文件名不被 Markdown 解析器提前截断。
+    """
+    return f"<{value.replace('<', '%3C').replace('>', '%3E')}>"
+
+
+def markdown_label(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
 
 
 def paragraphs(text: str) -> list[str]:
@@ -77,6 +90,14 @@ def enrich(record: dict) -> None:
     tags = [record["chapter_title"], record["section_title"], record["title"]]
     tags.extend(re.findall(r"[A-Za-z][A-Za-z0-9+./-]{1,}|[\u4e00-\u9fff]{2,6}", record["summary"]))
     record["tags"] = list(OrderedDict.fromkeys(tags))[:18]
+    if source:
+        items = "".join(f"<li>{html.escape(item)}</li>" for item in source)
+        record["source_html"] = f'<ul class="source-paragraphs">{items}</ul>'
+    else:
+        record["source_html"] = (
+            '<p class="source-placeholder">本节未提取到可识别教材文字；'
+            '请回源 PDF 核对图表、公式和上下文。</p>'
+        )
 
 
 def parse_file(path: Path) -> dict:
@@ -128,13 +149,16 @@ def parse_file(path: Path) -> dict:
 def records_from_chapter(chapter: dict) -> list[dict]:
     records: list[dict] = []
     for section in chapter["sections"]:
-        # 一级节若自身有文字层，也生成可读页面，避免孤立知识点无法学习。
-        if section["body"]:
-            records.append(normalize_record(chapter, section, section, "section"))
+        # 每个一级节都有独立概览页。如果文字层没有一级节正文，则聚合
+        # 子节正文，保证目录节点可学习，又不杜撰教材之外的事实。
+        section_record = dict(section)
+        if not section_record["body"]:
+            section_record["body"] = "".join(child["body"] for child in section["children"] if child["body"])
+        records.append(normalize_record(chapter, section, section_record, "section"))
         for point in section["children"]:
-            # 无文字层的标题仍保留在章节概览中，但不伪装成可直接学习的页面。
-            if point["body"]:
-                records.append(normalize_record(chapter, section, point, "subsection"))
+            # 教材文字层能识别出标题却无正文时，仍生成明确的回源占位页，
+            # 不因 PDF 提取缺口跳过教材编号。
+            records.append(normalize_record(chapter, section, point, "subsection"))
     return records
 
 
@@ -159,8 +183,18 @@ def point_markdown(record: dict, previous: dict | None, following: dict | None) 
     structured = "\n".join(f"### {heading}\n\n- {content}" for heading, content in record["structured"].items())
     exam_use = "\n".join(f"### {heading}\n\n- {content}" for heading, content in record["exam_use"].items())
     original = "\n".join(f"- {text}" for text in record["source_paragraphs"]) or "- 本节未提取到可识别教材文字；请回源 PDF 核对图表、公式和上下文。"
-    prev_link = f"[上一知识点：{previous['id']} {previous['title']}](./{previous['file_name']})" if previous else "- 已是当前知识库的第一个知识点。"
-    next_link = f"[下一知识点：{following['id']} {following['title']}](./{following['file_name']})" if following else "- 已是当前知识库的最后一个知识点。"
+    if previous:
+        prev_label = markdown_label(f"上一知识点：{previous['id']} {previous['title']}")
+        prev_target = markdown_destination(f"./{previous['file_name']}")
+        prev_link = f"[{prev_label}]({prev_target})"
+    else:
+        prev_link = "- 已是当前知识库的第一个知识点。"
+    if following:
+        next_label = markdown_label(f"下一知识点：{following['id']} {following['title']}")
+        next_target = markdown_destination(f"./{following['file_name']}")
+        next_link = f"[{next_label}]({next_target})"
+    else:
+        next_link = "- 已是当前知识库的最后一个知识点。"
     return f"""# {record['id']} {record['title']}
 
 > 所属：第{record['chapter']}章 {record['chapter_title']} → {record['section']} {record['section_title']}
@@ -185,7 +219,7 @@ def point_markdown(record: dict, previous: dict | None, following: dict | None) 
 
 ## 关联导航
 
-- [返回第{record['chapter']}章概览](../章节/{record['chapter_file_name']})
+- [返回第{record['chapter']}章概览]({markdown_destination(f"../章节/{record['chapter_file_name']}")})
 - {prev_link}
 - {next_link}
 
@@ -205,11 +239,15 @@ def chapter_markdown(chapter: dict, records: list[dict]) -> str:
             parts.extend([f"- 复习要点：{section['review']}", ""])
         if section["id"] in record_map:
             record = record_map[section["id"]]
-            parts.extend([f"- [直接学习：{record['id']} {record['title']}](../小节/{record['file_name']})", ""])
+            label = markdown_label(f"直接学习：{record['id']} {record['title']}")
+            destination = markdown_destination(f"../小节/{record['file_name']}")
+            parts.extend([f"- [{label}]({destination})", ""])
         for child in section["children"]:
             record = record_map.get(child["id"])
             if record:
-                parts.extend([f"- [{record['id']} {record['title']}](../小节/{record['file_name']})", ""])
+                label = markdown_label(f"{record['id']} {record['title']}")
+                destination = markdown_destination(f"../小节/{record['file_name']}")
+                parts.extend([f"- [{label}]({destination})", ""])
     parts.extend(["## 来源", "", f"- `{chapter['source']}`", ""])
     return "\n".join(parts)
 
@@ -252,7 +290,7 @@ def main() -> None:
     for record in records:
         browser_records.append({key: record[key] for key in (
             "id", "chapter", "chapter_title", "section", "section_title", "title", "summary", "structured",
-            "exam_use", "tags", "source_paragraphs", "prevId", "nextId", "chapter_source", "markdownPath", "kind",
+            "exam_use", "tags", "source_paragraphs", "source_html", "prevId", "nextId", "chapter_source", "markdownPath", "kind",
         )})
     SITE_DATA.write_text("window.KNOWLEDGE_POINT_DATA = " + json.dumps(browser_records, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
     print(f"已生成 {len(chapters)} 个章节概览、{len(records)} 个可读知识点页及站点数据。")
