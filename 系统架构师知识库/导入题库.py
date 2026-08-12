@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import re
 from typing import Any
+import importlib.util
 
 
 ROOT = Path(__file__).resolve().parent
@@ -154,14 +155,14 @@ def _update_ledger(root: Path, batch: dict[str, Any]) -> None:
     item = {
         "source_id": batch["source_id"], "status": batch["status"], "imported_at": batch["imported_at"],
         "year": batch["source"]["year"], "subject": batch["source"]["subject"],
+        "batch_id": batch["batch_id"], "batch_file": batch["batch_file"],
         "candidate_count": len(batch["candidates"]), "warning_count": len(batch["warnings"]),
     }
-    entries = [entry for entry in entries if isinstance(entry, dict) and entry.get("source_id") != batch["source_id"]]
     entries.append(item)
-    ledger_path.write_text(json.dumps(sorted(entries, key=lambda entry: str(entry.get("source_id", ""))), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    ledger_path.write_text(json.dumps(sorted(entries, key=lambda entry: str(entry.get("batch_id", ""))), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def import_pdf_source(source_id: str, *, catalog: dict[str, dict[str, Any]] | None = None, output_root: Path = QUESTION_ROOT, replace: bool = False, answer_source_id: str = "") -> dict[str, Any]:
+def import_pdf_source(source_id: str, *, catalog: dict[str, dict[str, Any]] | None = None, output_root: Path = QUESTION_ROOT, answer_source_id: str = "") -> dict[str, Any]:
     """将单一台账 PDF 导入待核对层；绝不触碰已核对正式题库。"""
     if not isinstance(source_id, str) or not SAFE_SOURCE_ID.fullmatch(source_id):
         raise ValueError("source ID 格式不正确")
@@ -169,9 +170,13 @@ def import_pdf_source(source_id: str, *, catalog: dict[str, dict[str, Any]] | No
     source = catalog.get(source_id)
     if not isinstance(source, dict):
         raise ValueError("source ID 未在私有真题台账登记")
-    batch_path = Path(output_root) / "待核对" / f"{source_id}.json"
-    if batch_path.exists() and not replace:
-        raise ValueError("待核对批次已存在；如需重新提取请使用 --replace")
+    imported_at = datetime.now()
+    batch_id = f"{source_id}-{imported_at.strftime('%Y%m%d-%H%M%S')}"
+    batch_path = Path(output_root) / "待核对" / f"{batch_id}.json"
+    suffix = 1
+    while batch_path.exists():
+        batch_path = Path(output_root) / "待核对" / f"{batch_id}-{suffix:02d}.json"
+        suffix += 1
     warnings = ["仅规则分段，必须人工核对题干、选项、答案和解析。"]
     raw_text = ""
     path = source.get("absolute_path")
@@ -196,20 +201,116 @@ def import_pdf_source(source_id: str, *, catalog: dict[str, dict[str, Any]] | No
             except RuntimeError as exc:
                 warnings.append(f"答案解析 PDF 提取失败：{exc}")
     batch = _batch_record(source_id, source, raw_text, warnings, answer_text)
+    batch["imported_at"] = imported_at.strftime("%Y-%m-%d %H:%M")
+    batch["batch_id"] = batch_path.stem
+    batch["batch_file"] = str(batch_path.relative_to(Path(output_root)))
     batch_path.parent.mkdir(parents=True, exist_ok=True)
     batch_path.write_text(json.dumps(batch, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     _update_ledger(Path(output_root), batch)
-    return {key: batch[key] for key in ("source_id", "status", "imported_at", "source", "candidates", "warnings")}
+    result = {key: batch[key] for key in ("source_id", "batch_id", "batch_file", "status", "imported_at", "source", "candidates", "warnings")}
+    result["batch_file"] = str(batch_path)
+    return result
+
+
+def _question_bank_module() -> Any:
+    path = QUESTION_ROOT / "题库模型.py"
+    spec = importlib.util.spec_from_file_location("review_question_bank_model", path)
+    if spec is None or spec.loader is None:
+        raise ValueError("无法加载题库模型")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def create_review_file(batch_path: Path, *, output_root: Path = QUESTION_ROOT, candidate_id: str = "") -> Path:
+    """从候选批次生成单题人工核对草稿，不自动确认答案。"""
+    batch = json.loads(Path(batch_path).read_text(encoding="utf-8"))
+    candidates = batch.get("candidates", []) if isinstance(batch, dict) else []
+    candidate = next((item for item in candidates if isinstance(item, dict) and (not candidate_id or item.get("id") == candidate_id)), None)
+    if candidate is None:
+        raise ValueError("批次中未找到候选题")
+    source = batch.get("source", {})
+    draft = {
+        "id": candidate.get("id", ""), "type": candidate.get("type", ""), "status": "review_required",
+        "title": "", "year": source.get("year", ""), "session": source.get("session", ""),
+        "subject": source.get("subject", ""), "source": {
+            "kind": source.get("kind", "local_pdf"), "source_id": batch.get("source_id", ""),
+            "label": source.get("title", ""), "url": "",
+        }, "knowledge_ids": [], "stem": candidate.get("stem", ""),
+        "options": candidate.get("options", []), "answer": "", "explanation": "",
+        "review_note": "", "candidate_answer_reference": candidate.get("answer_candidate", ""),
+        "candidate_explanation_reference": candidate.get("explanation_candidate", ""),
+        "review_warnings": candidate.get("warnings", []),
+    }
+    review_dir = Path(output_root) / "待核对" / "人工核对"
+    review_dir.mkdir(parents=True, exist_ok=True)
+    review_path = review_dir / f"{str(candidate.get('id', '')).replace(':', '_')}.json"
+    if review_path.exists():
+        raise ValueError("人工核对草稿已存在")
+    review_path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return review_path
+
+
+def promote_review_file(review_path: Path, *, points: list[dict[str, Any]], output_root: Path = QUESTION_ROOT) -> dict[str, str]:
+    """严格校验人工核对结果并追加到正式题库，永不覆盖已有题目。"""
+    draft = json.loads(Path(review_path).read_text(encoding="utf-8"))
+    if not isinstance(draft, dict) or draft.get("status") != "verified":
+        raise ValueError("必须完成人工核对并将 status 设为 verified")
+    review_note = draft.get("review_note")
+    if not isinstance(review_note, str) or "人工" not in review_note or len(review_note.strip()) < 12:
+        raise ValueError("必须填写可追溯的人工核对说明")
+    clean = {key: value for key, value in draft.items() if key not in {"candidate_answer_reference", "candidate_explanation_reference", "review_warnings"}}
+    model = _question_bank_module()
+    verified = model.validate_verified_question(clean, points)
+    verified_dir = Path(output_root) / "已核对"
+    verified_dir.mkdir(parents=True, exist_ok=True)
+    for path in verified_dir.glob("*.json"):
+        entries = json.loads(path.read_text(encoding="utf-8"))
+        if any(isinstance(item, dict) and item.get("id") == verified["id"] for item in entries if isinstance(entries, list)):
+            raise ValueError("正式题目 ID 已存在，不允许覆盖")
+    filename = {"single_choice": "选择题.json", "case_analysis": "案例分析.json", "essay": "论文.json"}[verified["type"]]
+    target = verified_dir / filename
+    entries = json.loads(target.read_text(encoding="utf-8")) if target.exists() else []
+    if not isinstance(entries, list):
+        raise ValueError("正式题库文件必须是数组")
+    entries.append(verified)
+    target.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"id": verified["id"], "file": str(target)}
+
+
+def load_knowledge_points(path: Path = ROOT / "site" / "knowledge-data.js") -> list[dict[str, Any]]:
+    text = Path(path).read_text(encoding="utf-8")
+    match = re.search(r"window\.KNOWLEDGE_POINT_DATA\s*=\s*(\[.*\])\s*;?\s*\Z", text, re.S)
+    if not match:
+        raise ValueError("无法读取知识点目录")
+    value = json.loads(match.group(1))
+    if not isinstance(value, list):
+        raise ValueError("知识点目录必须是数组")
+    return [item for item in value if isinstance(item, dict)]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="导入单一登记 PDF 到待核对互动题库批次")
-    parser.add_argument("--source-id", required=True, help="私有真题台账中的精确 ID，例如 q002")
-    parser.add_argument("--replace", action="store_true", help="仅覆盖同 source ID 的待核对批次")
-    parser.add_argument("--answer-source-id", default="", help="同年度答案解析 PDF 的私有台账 ID，例如 q003")
+    parser = argparse.ArgumentParser(description="题库导入、人工核对草稿与安全提升")
+    parser.add_argument("--action", choices=("import", "review", "promote"), default="import")
+    parser.add_argument("--source-id", default="", help="import 时的私有真题台账 ID")
+    parser.add_argument("--answer-source-id", default="", help="import 时可选的答案解析台账 ID")
+    parser.add_argument("--batch-file", default="", help="review 时的待核对批次 JSON")
+    parser.add_argument("--candidate-id", default="", help="review 时要生成草稿的候选题 ID")
+    parser.add_argument("--review-file", default="", help="promote 时已由人工完成的核对 JSON")
     args = parser.parse_args()
-    result = import_pdf_source(args.source_id, replace=args.replace, answer_source_id=args.answer_source_id)
-    print(json.dumps({**result, "candidate_count": len(result["candidates"])}, ensure_ascii=False, indent=2))
+    if args.action == "import":
+        if not args.source_id:
+            parser.error("import 必须提供 --source-id")
+        result = import_pdf_source(args.source_id, answer_source_id=args.answer_source_id)
+        print(json.dumps({**result, "candidate_count": len(result["candidates"])}, ensure_ascii=False, indent=2))
+    elif args.action == "review":
+        if not args.batch_file:
+            parser.error("review 必须提供 --batch-file")
+        print(create_review_file(Path(args.batch_file), candidate_id=args.candidate_id))
+    else:
+        if not args.review_file:
+            parser.error("promote 必须提供 --review-file")
+        print(json.dumps(promote_review_file(Path(args.review_file), points=load_knowledge_points()), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

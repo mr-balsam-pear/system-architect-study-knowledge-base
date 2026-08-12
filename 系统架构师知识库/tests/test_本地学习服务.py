@@ -384,6 +384,22 @@ class HttpHandlerTests(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertNotIn("raw_text", body.decode("utf-8"))
 
+    def test_practice_catalog_and_filter_include_verified_sources(self):
+        service = load_service_module()
+        points = [{"id": "7.3.4", "title": "以数据为中心的体系结构风格"}]
+        question = self._practice_question()
+        status, _, body = handle_http(service, "/api/practice/catalog", {}, points, practice_questions=[question])
+        self.assertEqual(200, status)
+        catalog = json.loads(body)
+        self.assertEqual(["training-set-01"], [item["source_id"] for item in catalog["sources"]])
+        status, _, body = handle_http(
+            service, "/api/practice/questions?source_id=training-set-01", {}, points, practice_questions=[question]
+        )
+        self.assertEqual(200, status)
+        self.assertEqual(["training-set-01:choice-01"], [item["id"] for item in json.loads(body)["questions"]])
+        status, _, _ = handle_http(service, "/api/practice/questions?source_id=../../etc", {}, points, practice_questions=[question])
+        self.assertEqual(400, status)
+
 
 class PodcastHttpTests(unittest.TestCase):
     WAV_BYTES = b"RIFF" + (28).to_bytes(4, "little") + b"WAVEfmt " + b"test-audio-bytes"

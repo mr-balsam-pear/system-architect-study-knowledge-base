@@ -72,11 +72,18 @@
         <label>题型<select id="practice-type"><option value="">全部题型</option><option value="single_choice">选择题</option><option value="case_analysis">案例分析</option><option value="essay">论文</option></select></label>
         <label>年份<select id="practice-year"><option value="">全部年份</option></select></label>
         <label>科目<select id="practice-subject"><option value="">全部科目</option></select></label>
+        <label>来源<select id="practice-source"><option value="">全部来源</option></select></label>
         <label>知识点<select id="practice-knowledge"><option value="">全部知识点</option></select></label>
+      </div>
+      <div class="practice-session-controls">
+        <label>模式<select id="practice-mode"><option value="single">单题沉浸</option><option value="paper">选择题整卷</option></select></label>
+        <label>限时（分钟）<input id="practice-limit" type="number" min="0" max="240" value="0"></label>
+        <button id="practice-start" class="button" type="button">开始 / 重置会话</button>
+        <span id="practice-progress">进度 0 / 0</span><strong id="practice-timer" aria-live="polite">00:00</strong>
       </div>
       <p id="practice-state" class="muted" aria-live="polite">正在读取已核对题库…</p>
       <div class="practice-layout">
-        <aside><div id="practice-list" class="practice-list" aria-label="已核对题目列表"></div></aside>
+        <aside><div id="practice-card" class="practice-card" aria-label="答题卡"></div><div id="practice-list" class="practice-list" aria-label="已核对题目列表"></div></aside>
         <article id="practice-reader" class="practice-reader" aria-live="polite"><p class="muted">选择左侧题目开始练习。</p></article>
       </div>
     </section>
@@ -167,6 +174,7 @@
   <footer><div class="wrap">本地个人知识库。外部资料只作路径索引；请自行核验来源、版本、版权与使用权限。</div></footer>
   <script src="data.js"></script>
   <script src="knowledge-data.js"></script>
+  <script src="practice-state.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

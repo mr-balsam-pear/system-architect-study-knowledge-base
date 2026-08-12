@@ -9,6 +9,9 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from datetime import datetime
+import contextlib
+import io
 
 
 KNOWLEDGE_ROOT = Path(__file__).resolve().parents[1]
@@ -166,6 +169,26 @@ class VerifiedQuestionModelTests(unittest.TestCase):
         looked_up["title"] = "已修改"
         self.assertEqual("数据中心架构风格辨析", questions[0]["title"])
 
+    def test_filter_supports_source_id_and_catalog_lists_verified_sources(self):
+        questions = [
+            self.question_bank.validate_verified_question(self._choice(), self.points),
+            self.question_bank.validate_verified_question({**self._choice(), "id": "q002:choice-01", "source": {
+                "kind": "local_pdf", "source_id": "q002", "label": "2009 真题", "url": "",
+            }}, self.points),
+        ]
+        matched = self.question_bank.filter_questions(questions, source_id="q002")
+        self.assertEqual(["q002:choice-01"], [item["id"] for item in matched])
+        self.assertEqual(
+            ["q002", "training-set-01"],
+            [item["source_id"] for item in self.question_bank.verified_source_catalog(questions)],
+        )
+
+    def test_explicit_pending_explanation_is_allowed_but_blank_is_rejected(self):
+        pending = self.question_bank.validate_verified_question({**self._choice(), "explanation": "待补充"}, self.points)
+        self.assertEqual("待补充", pending["explanation"])
+        with self.assertRaisesRegex(ValueError, "解析"):
+            self.question_bank.validate_verified_question({**self._choice(), "explanation": ""}, self.points)
+
 
 class ReviewBatchTests(unittest.TestCase):
     def setUp(self):
@@ -184,11 +207,15 @@ class ReviewBatchTests(unittest.TestCase):
             result = self.importer.import_pdf_source("q002", catalog=self.catalog, output_root=root)
             self.assertEqual("needs_review", result["status"])
             self.assertFalse(list((root / "已核对").glob("*.json")))
-            batch = json.loads((root / "待核对" / "q002.json").read_text(encoding="utf-8"))
+            batch_path = Path(result["batch_file"])
+            batch = json.loads(batch_path.read_text(encoding="utf-8"))
             self.assertIn("raw_text", batch)
             self.assertEqual("q002", batch["source_id"])
-            with self.assertRaisesRegex(ValueError, "已存在"):
-                self.importer.import_pdf_source("q002", catalog=self.catalog, output_root=root)
+            with patch.object(self.importer, "extract_pdf_text", return_value="(2)A. 甲 B. 乙 C. 丙 D. 丁"), patch.object(self.importer, "datetime") as clock:
+                clock.now.return_value = datetime(2026, 8, 8, 10, 31, 1)
+                second = self.importer.import_pdf_source("q002", catalog=self.catalog, output_root=root)
+            self.assertNotEqual(result["batch_file"], second["batch_file"])
+            self.assertEqual(2, len(list((root / "待核对").glob("q002-*.json"))))
 
     def test_restricted_source_index_never_persists_body(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -200,6 +227,49 @@ class ReviewBatchTests(unittest.TestCase):
             self.assertNotIn("token", record)
             stored = (Path(directory) / "来源索引" / "外部来源.json").read_text(encoding="utf-8")
             self.assertNotIn("forbidden", stored)
+
+    def test_review_template_requires_human_completion_and_promotion_never_overwrites(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            batch_path = root / "待核对" / "q002-20260808-103000.json"
+            batch_path.parent.mkdir(parents=True)
+            batch_path.write_text(json.dumps({
+                "source_id": "q002", "status": "needs_review", "source": {
+                    "year": "2009", "session": "下半年", "subject": "综合知识", "title": "2009 真题", "kind": "local_pdf",
+                }, "candidates": [{
+                    "id": "q002:choice-01", "type": "single_choice", "status": "candidate", "stem": "题干",
+                    "options": [{"label": "A", "text": "甲"}, {"label": "B", "text": "乙"}],
+                    "answer_candidate": "A", "explanation_candidate": "", "warnings": ["必须人工核对"],
+                }], "warnings": [],
+            }, ensure_ascii=False), encoding="utf-8")
+            review_path = self.importer.create_review_file(batch_path, output_root=root)
+            draft = json.loads(review_path.read_text(encoding="utf-8"))
+            self.assertEqual("review_required", draft["status"])
+            with self.assertRaisesRegex(ValueError, "人工核对"):
+                self.importer.promote_review_file(review_path, points=self.question_bank and self._points(), output_root=root)
+
+            draft.update({
+                "status": "verified", "title": "第 1 题", "knowledge_ids": ["7.3.4"], "answer": "A",
+                "explanation": "待补充", "review_note": "2026-08-12 人工对照原 PDF 核对题干、选项和答案。",
+            })
+            review_path.write_text(json.dumps(draft, ensure_ascii=False), encoding="utf-8")
+            result = self.importer.promote_review_file(review_path, points=self._points(), output_root=root)
+            self.assertEqual("q002:choice-01", result["id"])
+            with self.assertRaisesRegex(ValueError, "已存在"):
+                self.importer.promote_review_file(review_path, points=self._points(), output_root=root)
+
+    def test_cli_review_action_dispatches_without_promoting(self):
+        output = io.StringIO()
+        with patch.object(sys, "argv", ["导入题库.py", "--action", "review", "--batch-file", "/tmp/batch.json", "--candidate-id", "q002:choice-01"]), patch.object(
+            self.importer, "create_review_file", return_value=Path("/tmp/review.json")
+        ) as create, contextlib.redirect_stdout(output):
+            self.importer.main()
+        create.assert_called_once_with(Path("/tmp/batch.json"), candidate_id="q002:choice-01")
+        self.assertIn("/tmp/review.json", output.getvalue())
+
+    @staticmethod
+    def _points():
+        return [{"id": "7.3.4", "title": "以数据为中心的体系结构风格"}]
 
 
 if __name__ == "__main__":

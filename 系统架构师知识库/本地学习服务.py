@@ -464,15 +464,17 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
 
     def _practice_catalog(self) -> None:
         questions = self.app_data.practice_questions
+        module = _load_question_bank_module()
         self._json(HTTPStatus.OK, {
             "count": len(questions),
             "types": {key: sum(item.get("type") == key for item in questions) for key in ("single_choice", "case_analysis", "essay")},
             "years": sorted({str(item.get("year", "")) for item in questions if item.get("year")}),
             "subjects": sorted({str(item.get("subject", "")) for item in questions if item.get("subject")}),
+            "sources": module.verified_source_catalog(questions),
         })
 
     def _practice_questions(self, query: dict[str, list[str]]) -> None:
-        allowed = {"type", "year", "subject", "knowledge_id"}
+        allowed = {"type", "year", "subject", "knowledge_id", "source_id"}
         if set(query) - allowed or any(len(values) != 1 for values in query.values()):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "题库筛选参数不合法"})
             return
@@ -480,6 +482,7 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
         year = query.get("year", [""])[0]
         subject = query.get("subject", [""])[0]
         knowledge_id = query.get("knowledge_id", [""])[0]
+        source_id = query.get("source_id", [""])[0]
         if question_type and question_type not in {"single_choice", "case_analysis", "essay"}:
             self._json(HTTPStatus.BAD_REQUEST, {"error": "题目类型不合法"})
             return
@@ -489,8 +492,11 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
         if knowledge_id and (not SAFE_KNOWLEDGE_ID.fullmatch(knowledge_id) or knowledge_id not in {str(point.get("id")) for point in self.app_data.points}):
             self._json(HTTPStatus.BAD_REQUEST, {"error": "关联知识点不存在或格式不正确"})
             return
+        if source_id and not SAFE_PRACTICE_ID.fullmatch(source_id):
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "来源筛选不合法"})
+            return
         module = _load_question_bank_module()
-        questions = module.filter_questions(self.app_data.practice_questions, question_type=question_type, year=year, subject=subject, knowledge_id=knowledge_id)[:100]
+        questions = module.filter_questions(self.app_data.practice_questions, question_type=question_type, year=year, subject=subject, knowledge_id=knowledge_id, source_id=source_id)[:100]
         summaries = [{key: item[key] for key in ("id", "type", "title", "year", "session", "subject", "knowledge_ids", "source") if key in item} for item in questions]
         self._json(HTTPStatus.OK, {"questions": summaries, "count": len(summaries)})
 

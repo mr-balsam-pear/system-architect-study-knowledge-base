@@ -209,7 +209,7 @@ def load_verified_questions(root: Path = QUESTION_ROOT, points: list[dict[str, A
     return sorted(questions, key=lambda item: item["id"])
 
 
-def filter_questions(questions: list[dict[str, Any]], *, question_type: str = "", year: str = "", subject: str = "", knowledge_id: str = "") -> list[dict[str, Any]]:
+def filter_questions(questions: list[dict[str, Any]], *, question_type: str = "", year: str = "", subject: str = "", knowledge_id: str = "", source_id: str = "") -> list[dict[str, Any]]:
     """按可选条件筛选题目；返回副本，避免调用方污染加载结果。"""
     if question_type and question_type not in QUESTION_TYPES:
         return []
@@ -219,8 +219,25 @@ def filter_questions(questions: list[dict[str, Any]], *, question_type: str = ""
         and (not year or item.get("year") == year)
         and (not subject or item.get("subject") == subject)
         and (not knowledge_id or knowledge_id in item.get("knowledge_ids", []))
+        and (not source_id or item.get("source", {}).get("source_id") == source_id)
     ]
     return deepcopy(sorted(selected, key=lambda item: item.get("id", "")))
+
+
+def verified_source_catalog(questions: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """从已校验题目生成可公开的来源筛选目录。"""
+    sources: dict[str, dict[str, str]] = {}
+    for item in questions:
+        source = item.get("source", {}) if isinstance(item, dict) else {}
+        source_id = source.get("source_id") if isinstance(source, dict) else None
+        if not isinstance(source_id, str) or not _QUESTION_ID_RE.fullmatch(source_id):
+            continue
+        sources.setdefault(source_id, {
+            "source_id": source_id,
+            "label": str(source.get("label", "")),
+            "kind": str(source.get("kind", "")),
+        })
+    return deepcopy([sources[key] for key in sorted(sources)])
 
 
 def question_by_id(questions: list[dict[str, Any]], question_id: str) -> dict[str, Any] | None:
