@@ -79,6 +79,9 @@
       // Storage may be unavailable in private or restricted browsing contexts.
     }
   }
+  function scrollToSection(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -548,6 +551,9 @@
   document.getElementById('record-case').addEventListener('click', () => openStudyRecord({ type: '案例', title: '案例分析复盘', subject: '案例分析' }));
   document.getElementById('record-essay').addEventListener('click', () => openStudyRecord({ type: '论文素材', title: '论文项目素材', subject: '论文' }));
   document.getElementById('record-essay-material').addEventListener('click', () => openStudyRecord({ type: '论文素材', title: '论文项目素材', subject: '论文' }));
+  document.getElementById('mission-review').addEventListener('click', () => scrollToSection('study-dashboard'));
+  document.getElementById('mission-practice').addEventListener('click', () => scrollToSection('practice'));
+  document.getElementById('mission-rule').addEventListener('click', () => openStudyRecord({ type: '知识点学习' }));
   document.getElementById('open-podcast-workspace').addEventListener('click', openPodcastWorkspace);
   document.getElementById('close-podcast-workspace').addEventListener('click', closePodcastWorkspace);
   document.getElementById('podcast-only-incomplete').addEventListener('change', renderPodcastList);
