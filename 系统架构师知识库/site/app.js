@@ -7,6 +7,8 @@
   const knowledgeSearch = document.getElementById('knowledge-search');
   const searchResults = document.getElementById('search-results');
   const searchSummary = document.getElementById('search-summary');
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeStorageKey = 'system-architect-study-theme';
   const questionDialog = document.getElementById('question-dialog');
   const questionMeta = document.getElementById('question-meta');
   const questionTitle = document.getElementById('question-title');
@@ -30,6 +32,34 @@
   let practiceStartedAt = 0;
   let previewRequestId = 0;
   let previewController = null;
+
+  function systemTheme() {
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function savedTheme() {
+    try {
+      const theme = localStorage.getItem(themeStorageKey);
+      return theme === 'dark' || theme === 'light' ? theme : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function applyTheme(theme) {
+    const activeTheme = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = activeTheme;
+    themeToggle.textContent = activeTheme === 'dark' ? '🌙 黑夜' : '☀️ 白天';
+    themeToggle.setAttribute('aria-pressed', String(activeTheme === 'dark'));
+    themeToggle.setAttribute('aria-label', activeTheme === 'dark' ? '切换为白天模式' : '切换为黑夜模式');
+  }
+  function toggleTheme() {
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(theme);
+    try {
+      localStorage.setItem(themeStorageKey, theme);
+    } catch (_) {
+      // Storage may be unavailable in private or restricted browsing contexts.
+    }
+  }
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -314,6 +344,8 @@
     options(year, unique('year')); options(subject, unique('subject')); options(type, unique('material_type')); [year, subject, type].forEach(select => select.addEventListener('change', render)); render();
   }
   function countdown() { const target = new Date('2026-10-24T00:00:00+08:00'); document.getElementById('countdown').textContent = `${Math.max(0, Math.ceil((target - new Date()) / 86400000))} 天`; }
+  applyTheme(savedTheme() || systemTheme());
+  themeToggle.addEventListener('click', toggleTheme);
   knowledgeSearch.addEventListener('input', searchKnowledge);
   document.getElementById('close-question').addEventListener('click', () => questionDialog.close());
   document.getElementById('close-study').addEventListener('click', closeStudyDialog);
