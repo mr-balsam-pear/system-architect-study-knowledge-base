@@ -155,6 +155,23 @@ class KnowledgeRankingTests(unittest.TestCase):
         self.assertEqual(["1.1"], [match["id"] for match in matches])
         self.assertEqual(["系统"], matches[0]["reasons"])
 
+    def test_rank_knowledge_normalizes_width_case_spacing_and_punctuation(self):
+        service = load_service_module()
+        points = [{"id": "8.3", "title": "ATAM 架构评估", "tags": [], "summary": ""}]
+        matches = service.rank_knowledge("ａｔａｍ，架 构。评估", points)
+        self.assertEqual(["8.3"], [match["id"] for match in matches])
+        self.assertIn("ATAM 架构评估", matches[0]["reasons"])
+
+    def test_rank_knowledge_matches_source_paragraphs(self):
+        service = load_service_module()
+        points = [{
+            "id": "7.3.4", "title": "无关标题", "tags": [], "summary": "无关摘要",
+            "source_paragraphs": ["黑板系统通过知识源协同求解复杂问题。"],
+        }]
+        matches = service.rank_knowledge("黑板系统，通过知识源协同求解复杂问题", points)
+        self.assertEqual(["7.3.4"], [match["id"] for match in matches])
+        self.assertIn("黑板系统通过知识源协同求解复杂问题。", matches[0]["reasons"])
+
 
 class StudyArchiveTests(unittest.TestCase):
     def _points(self):
@@ -170,7 +187,7 @@ class StudyArchiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.object(service, "STUDY_ROOT", Path(directory) / "学习档案"):
             record = service.validate_study_record(self._payload(), self._points())
             first = service.append_study_record(record, self._points())
-            week = KNOWLEDGE_ROOT / first["week_file"] if False else service.STUDY_ROOT / "周报" / "2026-W32.md"
+            week = service.STUDY_ROOT.parent / first["week_file"]
             topic = next((service.STUDY_ROOT / "专题").glob("7.3.4-*.md"))
             week.write_text(week.read_text(encoding="utf-8") + "\n我的手工复盘不可覆盖\n", encoding="utf-8")
             again = service.append_study_record(record, self._points())
@@ -179,6 +196,23 @@ class StudyArchiveTests(unittest.TestCase):
             self.assertIn("我的手工复盘不可覆盖", week.read_text(encoding="utf-8"))
             self.assertLess(week.read_text(encoding="utf-8").index("## 手工复盘区"), week.read_text(encoding="utf-8").index("## 自动追加记录区"))
             self.assertIn("[20260808-103000-a1b2]", topic.read_text(encoding="utf-8"))
+
+    def test_duplicate_week_record_repairs_missing_topic_index(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "STUDY_ROOT", Path(directory) / "学习档案"):
+            record = service.validate_study_record(self._payload(), self._points())
+            first = service.append_study_record(record, self._points())
+            week = service.STUDY_ROOT.parent / first["week_file"]
+            topic = service.STUDY_ROOT.parent / first["topic_file"]
+            topic.write_text(topic.read_text(encoding="utf-8").replace(
+                next(line for line in topic.read_text(encoding="utf-8").splitlines() if "[20260808-103000-a1b2]" in line) + "\n", ""
+            ), encoding="utf-8")
+
+            again = service.append_study_record(record, self._points())
+
+            self.assertEqual("true", again["duplicate"])
+            self.assertEqual(1, week.read_text(encoding="utf-8").count("[20260808-103000-a1b2]"))
+            self.assertEqual(1, topic.read_text(encoding="utf-8").count("[20260808-103000-a1b2]"))
 
     def test_validation_rejects_unknown_path_type_and_oversized_fields(self):
         service = load_service_module()
@@ -263,6 +297,21 @@ class HttpHandlerTests(unittest.TestCase):
         self.assertIn("暂无法提取", payload["text_status"])
         self.assertNotIn("/secret/path.pdf", body.decode("utf-8"))
 
+    def test_question_metadata_caches_extraction_and_matches_by_question_id(self):
+        service = load_service_module()
+        points = [{"id": "8.3", "title": "ATAM", "tags": [], "summary": ""}]
+        with tempfile.TemporaryDirectory() as directory:
+            safe_pdf = Path(directory) / "safe.pdf"
+            safe_pdf.write_bytes(b"%PDF-minimal")
+            catalog = {"q001": {"id": "q001", "absolute_path": str(safe_pdf)}}
+            service.LearningRequestHandler.app_data = service.AppData(catalog, points)
+            with patch.object(service, "extract_pdf_text", return_value="ATAM") as extract:
+                for _ in range(2):
+                    socket = _FakeSocket(b"GET /api/questions/q001 HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                    service.LearningRequestHandler(socket, ("127.0.0.1", 0), _FakeServer())
+                    self.assertEqual(200, int(socket.output.getvalue().split(b"\r\n", 1)[0].split()[1]))
+            self.assertEqual(1, extract.call_count)
+
     def test_static_directory_traversal_is_not_served(self):
         service = load_service_module()
         status, _, _ = handle_http(service, "/%2e%2e/%2e%2e/etc/passwd", {})
@@ -311,6 +360,13 @@ class HttpHandlerTests(unittest.TestCase):
             status, _, body = handle_http(service, "/api/study/dashboard", {}, points)
             self.assertEqual(200, status)
             self.assertEqual(1, json.loads(body)["record_count"])
+
+            status, _, body = handle_http(service, "/api/study/records?knowledge_id=7.3.4", {}, points)
+            self.assertEqual(200, status)
+            self.assertEqual(["20260808-103000-a1b2"], [item["id"] for item in json.loads(body)["records"]])
+            status, _, body = handle_http(service, "/api/study/records?knowledge_id=../../etc", {}, points)
+            self.assertEqual(400, status)
+            self.assertIn("关联知识点", json.loads(body)["error"])
 
     def test_practice_routes_filter_securely_and_hide_review_content(self):
         service = load_service_module()

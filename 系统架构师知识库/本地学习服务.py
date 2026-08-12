@@ -17,6 +17,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any
+import unicodedata
 from urllib.parse import parse_qs, unquote, urlparse
 from uuid import uuid4
 
@@ -126,9 +127,24 @@ def _terms(value: Any) -> list[str]:
     return list(dict.fromkeys(term for term in result if len(term) >= 2))
 
 
+def normalize_match_text(value: Any) -> str:
+    """归一化用于术语匹配的中英文文本。
+
+    NFKC 合并全角/半角及兼容字形，casefold 统一英文大小写；
+    空白、标点和符号不承载术语语义，匹配时忽略。
+    """
+    if not isinstance(value, str):
+        return ""
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    return "".join(character for character in normalized if not character.isspace() and unicodedata.category(character)[0] not in {"P", "S"})
+
+
 def rank_knowledge(question_text: str, points: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
     """用可解释的精确术语命中，将题干关联到最多 ``limit`` 个知识点。"""
     if not isinstance(question_text, str) or not question_text.strip() or limit <= 0:
+        return []
+    normalized_question = normalize_match_text(question_text)
+    if not normalized_question:
         return []
     matches: list[dict[str, Any]] = []
     for point in points:
@@ -140,7 +156,8 @@ def rank_knowledge(question_text: str, points: list[dict[str, Any]], limit: int 
         def score_terms(values: list[str], weight: int) -> None:
             nonlocal score
             for value in values:
-                if value in question_text:
+                normalized_value = normalize_match_text(value)
+                if normalized_value and normalized_value in normalized_question:
                     score += weight
                     if value not in reasons and len(reasons) < 8:
                         reasons.append(value)
@@ -152,6 +169,10 @@ def rank_knowledge(question_text: str, points: list[dict[str, Any]], limit: int 
             for tag in tags:
                 score_terms(_terms(tag), 9)
         score_terms(_terms(point.get("summary")), 2)
+        source_paragraphs = point.get("source_paragraphs", [])
+        if isinstance(source_paragraphs, list):
+            for paragraph in source_paragraphs:
+                score_terms(_terms(paragraph), 1)
 
         if score > 0:
             matches.append({
@@ -299,15 +320,15 @@ def append_study_record(record: dict[str, Any], points: list[dict[str, Any]]) ->
     week_name = str(week_path.relative_to(STUDY_ROOT.parent))
     topic_name = str(topic_path.relative_to(STUDY_ROOT.parent))
     existing = week_path.read_text(encoding="utf-8")
-    if f"[{record['id']}]" in existing:
-        return {"id": record["id"], "week_file": week_name, "topic_file": topic_name, "duplicate": "true"}
-    with week_path.open("a", encoding="utf-8") as file:
-        file.write(_record_block(record))
+    duplicate = f"[{record['id']}]" in existing
+    if not duplicate:
+        with week_path.open("a", encoding="utf-8") as file:
+            file.write(_record_block(record))
     topic_existing = topic_path.read_text(encoding="utf-8")
     if f"[{record['id']}]" not in topic_existing:
         with topic_path.open("a", encoding="utf-8") as file:
             file.write(f"- [{record['id']}] {record['created_at'][:10]}｜{record['type']}｜{record['result'] or '未填写'}｜错因：{record['error_type'] or '未填写'}｜周报：`../周报/{week_path.name}`\n")
-    return {"id": record["id"], "week_file": week_name, "topic_file": topic_name, "duplicate": "false"}
+    return {"id": record["id"], "week_file": week_name, "topic_file": topic_name, "duplicate": str(duplicate).lower()}
 
 
 def read_study_records() -> list[dict[str, Any]]:
@@ -352,6 +373,7 @@ class AppData:
         self.points = points
         self.practice_questions = practice_questions if practice_questions is not None else []
         self.practice_sources = practice_sources if practice_sources is not None else []
+        self.question_match_cache: dict[str, dict[str, Any]] = {}
 
 
 class LearningRequestHandler(SimpleHTTPRequestHandler):
@@ -493,7 +515,7 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
         return {key: record[key] for key in allowed if key in record}
 
     def _serve_question_metadata(self, encoded_id: str) -> None:
-        _, record = self._question(encoded_id)
+        question_id, record = self._question(encoded_id)
         if record is None:
             self._json(HTTPStatus.NOT_FOUND, {"error": "未找到已登记的真题 ID"})
             return
@@ -502,6 +524,11 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "登记的 PDF 文件不存在或不可用"})
             return
         payload = self._metadata(record)
+        cached = self.app_data.question_match_cache.get(question_id)
+        if cached is not None:
+            payload.update(cached)
+            self._json(HTTPStatus.OK, payload)
+            return
         try:
             question_text = extract_pdf_text(path)
             payload["text_status"] = "已提取前 12 页文字，用于关联知识点。"
@@ -511,6 +538,10 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
             LOGGER.warning("真题 %s 的文本提取不可用：%s", record.get("id", "未知"), exc)
             payload["text_status"] = "暂无法提取题目文字，关联知识点功能不可用；仍可直接预览 PDF。"
             payload["matches"] = []
+        self.app_data.question_match_cache[question_id] = {
+            "text_status": payload["text_status"],
+            "matches": payload["matches"],
+        }
         self._json(HTTPStatus.OK, payload)
 
     def _serve_question_pdf(self, encoded_id: str) -> None:
