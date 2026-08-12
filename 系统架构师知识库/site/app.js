@@ -34,7 +34,11 @@
   let previewController = null;
 
   function systemTheme() {
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    try {
+      return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (_) {
+      return 'light';
+    }
   }
   function savedTheme() {
     try {
