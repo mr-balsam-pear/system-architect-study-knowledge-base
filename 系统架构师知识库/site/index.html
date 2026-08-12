@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="系统架构设计师个人本地学习知识库">
   <title>系统架构设计师 · 学习知识库</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('system-architect-study-theme');
+      const theme = savedTheme === 'dark' || savedTheme === 'light'
+        ? savedTheme
+        : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = theme;
+    } catch (_) {
+      document.documentElement.dataset.theme = 'light';
+    }
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
