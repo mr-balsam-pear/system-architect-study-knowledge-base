@@ -54,6 +54,20 @@ class _FakeSocket:
         self.output.write(data)
 
 
+class _DisconnectingSocket(_FakeSocket):
+    """在响应头写出后模拟浏览器取消音频请求。"""
+
+    def __init__(self, request: bytes):
+        super().__init__(request)
+        self.send_count = 0
+
+    def sendall(self, data):
+        self.send_count += 1
+        if self.send_count > 1:
+            raise BrokenPipeError("client disconnected")
+        super().sendall(data)
+
+
 class _FakeServer:
     server_version = "TestHTTP"
     sys_version = ""
@@ -446,6 +460,17 @@ class PodcastHttpTests(unittest.TestCase):
             status, _, body = handle_http(service, "/api/podcasts/2/audio", {}, request_headers={"Range": "bytes=10-"})
             self.assertEqual(206, status)
             self.assertEqual(self.WAV_BYTES[10:], body)
+
+    def test_podcast_audio_ignores_client_disconnect_after_headers(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "PODCAST_ROOT", Path(directory)):
+            self._write_registered_audio(service, Path(directory))
+            service.LearningRequestHandler.app_data = service.AppData({}, [])
+            request = b"GET /api/podcasts/2/audio HTTP/1.1\r\nHost: localhost\r\n\r\n"
+            socket = _DisconnectingSocket(request)
+            service.LearningRequestHandler(socket, ("127.0.0.1", 0), _FakeServer())
+
+        self.assertGreater(socket.send_count, 1)
 
     def test_podcast_audio_rejects_invalid_ranges_with_416(self):
         service = load_service_module()

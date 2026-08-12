@@ -599,10 +599,10 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
                             break
                         self.wfile.write(chunk)
                         remaining -= len(chunk)
-        except OSError:
-            self._json(HTTPStatus.NOT_FOUND, {"error": "本机播客文件不可用"})
         except (BrokenPipeError, ConnectionResetError):
             return
+        except OSError:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "本机播客文件不可用"})
 
     def _question(self, encoded_id: str) -> tuple[str, dict[str, Any] | None]:
         question_id = unquote(encoded_id)
