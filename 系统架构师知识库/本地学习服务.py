@@ -28,6 +28,29 @@ PRIVATE_CATALOG_FILE = ROOT / "真题台账私有.json"
 KNOWLEDGE_FILE = SITE_ROOT / "knowledge-data.js"
 STUDY_ROOT = ROOT / "学习档案"
 QUESTION_BANK_ROOT = ROOT / "题库数据"
+PODCAST_ROOT = ROOT.parent / "章节播客"
+PODCAST_CATALOG = {
+    "1": {"chapter": "1", "title": "绪论", "filename": "", "duration_seconds": 0},
+    "2": {"chapter": "2", "title": "计算机系统的硬件组成", "filename": "第02章-计算机系统的硬件组成.wav", "duration_seconds": 2429},
+    "3": {"chapter": "3", "title": "信息系统的基本概念与功能", "filename": "第03章-信息系统的基本概念与功能.wav", "duration_seconds": 2143},
+    "4": {"chapter": "4", "title": "系统规划", "filename": "", "duration_seconds": 0},
+    "5": {"chapter": "5", "title": "软件工程中的常见开发方法", "filename": "第05章-软件工程中的常见开发方法.wav", "duration_seconds": 2350},
+    "6": {"chapter": "6", "title": "数据库系统中数据模型的三要素", "filename": "第06章-数据库系统中数据模型的三要素.wav", "duration_seconds": 2157},
+    "7": {"chapter": "7", "title": "软件架构设计的不同阶段", "filename": "第07章-软件架构设计的不同阶段.wav", "duration_seconds": 3171},
+    "8": {"chapter": "8", "title": "软件系统质量属性及评估", "filename": "第08章-软件系统质量属性及评估.wav", "duration_seconds": 2061},
+    "9": {"chapter": "9", "title": "软件可靠性的定义与定量描述", "filename": "第09章-软件可靠性的定义与定量描述.wav", "duration_seconds": 2680},
+    "10": {"chapter": "10", "title": "软件架构的演化与维护", "filename": "第10章-软件架构的演化与维护.wav", "duration_seconds": 3012},
+    "11": {"chapter": "11", "title": "信息物理系统技术概述", "filename": "第11章-信息物理系统技术概述.wav", "duration_seconds": 2591},
+    "12": {"chapter": "12", "title": "信息系统架构的基本概念与发展", "filename": "第12章-信息系统架构的基本概念与发展.wav", "duration_seconds": 2220},
+    "13": {"chapter": "13", "title": "层次式架构及相关设计模式", "filename": "第13章-层次式架构及相关设计模式.wav", "duration_seconds": 2088},
+    "14": {"chapter": "14", "title": "云原生架构：释放云计算技术红利", "filename": "第14章-云原生架构：释放云计算技术红利.wav", "duration_seconds": 3435},
+    "15": {"chapter": "15", "title": "SOA+ 的发展历程与标准", "filename": "第15章-SOA+的发展历程与标准.wav", "duration_seconds": 2943},
+    "16": {"chapter": "16", "title": "嵌入式系统的硬件组成与分类", "filename": "第16章-嵌入式系统的硬件组成与分类.wav", "duration_seconds": 2303},
+    "17": {"chapter": "17", "title": "通信系统网络架构的演进", "filename": "第17章-通信系统网络架构的演进.wav", "duration_seconds": 2510},
+    "18": {"chapter": "18", "title": "安全架构设计的主要内容", "filename": "第18章-安全架构设计的主要内容.wav", "duration_seconds": 2225},
+    "19": {"chapter": "19", "title": "大数据架构设计面临的挑战", "filename": "第19章-大数据架构设计面临的挑战.wav", "duration_seconds": 2499},
+    "20": {"chapter": "20", "title": "系统架构师论文写作要点", "filename": "第20章-系统架构师论文写作要点.wav", "duration_seconds": 1013},
+}
 SAFE_ID = re.compile(r"[A-Za-z0-9_-]+\Z")
 SAFE_PRACTICE_ID = re.compile(r"[A-Za-z0-9:_-]+\Z")
 SAFE_KNOWLEDGE_ID = re.compile(r"\d+(?:\.\d+)+\Z")
@@ -377,7 +400,7 @@ class AppData:
 
 
 class LearningRequestHandler(SimpleHTTPRequestHandler):
-    """仅开放三个 API，其他路径由受限的 site 根目录静态提供。"""
+    """仅开放显式登记的 API，其他路径由受限的 site 根目录静态提供。"""
 
     app_data: AppData
 
@@ -388,12 +411,14 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
         # 保留标准访问日志，避免泄露真题绝对路径。
         super().log_message(format, *args)
 
-    def _json(self, status: int, payload: dict[str, Any]) -> None:
+    def _json(self, status: int, payload: dict[str, Any], extra_headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
@@ -481,6 +506,97 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
 
     def _practice_sources(self) -> None:
         self._json(HTTPStatus.OK, {"sources": self.app_data.practice_sources})
+
+    @staticmethod
+    def _registered_podcast(chapter: str) -> tuple[dict[str, Any], Path] | None:
+        record = PODCAST_CATALOG.get(chapter)
+        if record is None or not record["filename"]:
+            return None
+        root = PODCAST_ROOT.resolve()
+        candidate = PODCAST_ROOT / record["filename"]
+        try:
+            path = candidate.resolve(strict=True)
+            path.relative_to(root)
+        except (OSError, ValueError):
+            return None
+        if path.suffix.lower() != ".wav" or not path.is_file():
+            return None
+        try:
+            with path.open("rb") as file:
+                header = file.read(12)
+        except OSError:
+            return None
+        if len(header) < 12 or header[:4] != b"RIFF" or header[8:12] != b"WAVE":
+            return None
+        return record, path
+
+    def _podcast_catalog(self) -> None:
+        podcasts = []
+        for chapter in sorted(PODCAST_CATALOG, key=int):
+            record = PODCAST_CATALOG[chapter]
+            podcasts.append({
+                "chapter": record["chapter"], "title": record["title"],
+                "filename": record["filename"], "duration_seconds": record["duration_seconds"],
+                "available": self._registered_podcast(chapter) is not None,
+            })
+        self._json(HTTPStatus.OK, {"podcasts": podcasts})
+
+    @staticmethod
+    def _single_byte_range(value: str, size: int) -> tuple[int, int] | None:
+        match = re.fullmatch(r"bytes=(\d*)-(\d*)", value.strip())
+        if match is None or not any(match.groups()):
+            return None
+        start_text, end_text = match.groups()
+        if not start_text:
+            length = int(end_text)
+            if length <= 0:
+                return None
+            return max(0, size - length), size - 1
+        start = int(start_text)
+        if start >= size:
+            return None
+        end = int(end_text) if end_text else size - 1
+        if end < start:
+            return None
+        return start, min(end, size - 1)
+
+    def _serve_podcast_audio(self, chapter: str) -> None:
+        registered = self._registered_podcast(chapter)
+        if registered is None:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "本机播客文件不可用"})
+            return
+        _, path = registered
+        try:
+            with path.open("rb") as file:
+                size = os.fstat(file.fileno()).st_size
+                requested = self.headers.get("Range")
+                byte_range = self._single_byte_range(requested, size) if requested else (0, size - 1)
+                if byte_range is None:
+                    self._json(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE, {"error": "音频范围请求不合法"}, {"Content-Range": f"bytes */{size}", "Accept-Ranges": "bytes"})
+                    return
+                start, end = byte_range
+                length = end - start + 1
+                self.send_response(HTTPStatus.PARTIAL_CONTENT if requested else HTTPStatus.OK)
+                self.send_header("Content-Type", "audio/wav")
+                self.send_header("Content-Length", str(length))
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("Cache-Control", "no-store")
+                if requested:
+                    self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+                self.end_headers()
+                if self.command != "HEAD":
+                    file.seek(start)
+                    remaining = length
+                    while remaining:
+                        chunk = file.read(min(1024 * 1024, remaining))
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        remaining -= len(chunk)
+        except OSError:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "本机播客文件不可用"})
+        except (BrokenPipeError, ConnectionResetError):
+            return
 
     def _question(self, encoded_id: str) -> tuple[str, dict[str, Any] | None]:
         question_id = unquote(encoded_id)
@@ -597,6 +713,13 @@ class LearningRequestHandler(SimpleHTTPRequestHandler):
             return True
         if path == "/api/practice/sources":
             self._practice_sources()
+            return True
+        if path == "/api/podcasts":
+            self._podcast_catalog()
+            return True
+        podcast_match = re.fullmatch(r"/api/podcasts/(\d+)/audio", path)
+        if podcast_match:
+            self._serve_podcast_audio(podcast_match.group(1))
             return True
         practice_match = re.fullmatch(r"/api/practice/questions/([^/]+)", path)
         if practice_match:

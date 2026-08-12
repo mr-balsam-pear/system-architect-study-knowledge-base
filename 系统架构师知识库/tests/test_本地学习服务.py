@@ -59,10 +59,12 @@ class _FakeServer:
     sys_version = ""
 
 
-def handle_http(service, target: str, catalog, points=(), method="GET", practice_questions=None, practice_sources=None):
+def handle_http(service, target: str, catalog, points=(), method="GET", practice_questions=None, practice_sources=None, request_headers=None):
     """在无监听端口的单测环境下执行一次真实 HTTP handler 请求。"""
     service.LearningRequestHandler.app_data = service.AppData(catalog, list(points), practice_questions, practice_sources)
-    socket = _FakeSocket(f"{method} {target} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode())
+    headers = {"Host": "localhost", **(request_headers or {})}
+    raw_headers = "".join(f"{name}: {value}\r\n" for name, value in headers.items())
+    socket = _FakeSocket(f"{method} {target} HTTP/1.1\r\n{raw_headers}\r\n".encode())
     service.LearningRequestHandler(socket, ("127.0.0.1", 0), _FakeServer())
     raw = socket.output.getvalue()
     header, body = raw.split(b"\r\n\r\n", 1)
@@ -381,6 +383,113 @@ class HttpHandlerTests(unittest.TestCase):
         status, _, body = handle_http(service, "/api/practice/sources", {}, points, practice_questions=[question], practice_sources=sources)
         self.assertEqual(200, status)
         self.assertNotIn("raw_text", body.decode("utf-8"))
+
+
+class PodcastHttpTests(unittest.TestCase):
+    WAV_BYTES = b"RIFF" + (28).to_bytes(4, "little") + b"WAVEfmt " + b"test-audio-bytes"
+
+    def _write_registered_audio(self, service, root: Path, chapter: str = "2") -> Path:
+        root.mkdir(parents=True, exist_ok=True)
+        path = root / service.PODCAST_CATALOG[chapter]["filename"]
+        path.write_bytes(self.WAV_BYTES)
+        return path
+
+    def test_podcast_catalog_returns_twenty_safe_entries_and_availability(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "PODCAST_ROOT", Path(directory)):
+            self._write_registered_audio(service, Path(directory), "2")
+            status, _, body = handle_http(service, "/api/podcasts", {})
+        payload = json.loads(body)
+        self.assertEqual(200, status)
+        self.assertEqual(20, len(payload["podcasts"]))
+        self.assertEqual({"chapter", "title", "filename", "duration_seconds", "available"}, set(payload["podcasts"][0]))
+        self.assertFalse(next(item for item in payload["podcasts"] if item["chapter"] == "1")["available"])
+        self.assertTrue(next(item for item in payload["podcasts"] if item["chapter"] == "2")["available"])
+        self.assertFalse(next(item for item in payload["podcasts"] if item["chapter"] == "4")["available"])
+        self.assertNotIn(str(Path(directory)), body.decode("utf-8"))
+
+    def test_podcast_audio_supports_full_and_single_ranges(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "PODCAST_ROOT", Path(directory)):
+            self._write_registered_audio(service, Path(directory))
+            status, headers, body = handle_http(service, "/api/podcasts/2/audio", {})
+            self.assertEqual(200, status)
+            self.assertIn("Content-Type: audio/wav", headers)
+            self.assertIn("Accept-Ranges: bytes", headers)
+            self.assertEqual(self.WAV_BYTES, body)
+
+            status, headers, body = handle_http(service, "/api/podcasts/2/audio", {}, request_headers={"Range": "bytes=4-11"})
+            self.assertEqual(206, status)
+            self.assertIn(f"Content-Range: bytes 4-11/{len(self.WAV_BYTES)}", headers)
+            self.assertEqual(self.WAV_BYTES[4:12], body)
+
+            status, headers, body = handle_http(service, "/api/podcasts/2/audio", {}, request_headers={"Range": "bytes=-5"})
+            self.assertEqual(206, status)
+            self.assertEqual(self.WAV_BYTES[-5:], body)
+
+            status, _, body = handle_http(service, "/api/podcasts/2/audio", {}, request_headers={"Range": "bytes=10-"})
+            self.assertEqual(206, status)
+            self.assertEqual(self.WAV_BYTES[10:], body)
+
+    def test_podcast_audio_rejects_invalid_ranges_with_416(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "PODCAST_ROOT", Path(directory)):
+            self._write_registered_audio(service, Path(directory))
+            for value in ("bytes=999-1000", "bytes=8-4", "items=0-2", "bytes=0-1,4-5", "bytes=-0"):
+                status, headers, body = handle_http(service, "/api/podcasts/2/audio", {}, request_headers={"Range": value})
+                self.assertEqual(416, status, value)
+                self.assertIn(f"Content-Range: bytes */{len(self.WAV_BYTES)}", headers)
+                self.assertIn("application/json", headers)
+                self.assertIn("error", json.loads(body))
+
+    def test_podcast_audio_rejects_unknown_traversal_missing_and_invalid_files_safely(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "PODCAST_ROOT", Path(directory)):
+            root = Path(directory)
+            root.mkdir(exist_ok=True)
+            for target in ("/api/podcasts/99/audio", "/api/podcasts/%2E%2E%2F2/audio", "/api/podcasts/1/audio", "/api/podcasts/2/audio"):
+                status, headers, body = handle_http(service, target, {})
+                self.assertEqual(404, status, target)
+                self.assertIn("application/json", headers)
+                self.assertNotIn(str(root), body.decode("utf-8"))
+
+            audio = self._write_registered_audio(service, root)
+            audio.write_bytes(b"not-a-wave")
+            status, _, body = handle_http(service, "/api/podcasts/2/audio", {})
+            self.assertEqual(404, status)
+            self.assertNotIn(str(root), body.decode("utf-8"))
+
+            audio.unlink()
+            outside = root.parent / "outside.wav"
+            outside.write_bytes(self.WAV_BYTES)
+            try:
+                audio.symlink_to(outside)
+                status, _, body = handle_http(service, "/api/podcasts/2/audio", {})
+                self.assertEqual(404, status)
+                self.assertNotIn(str(outside), body.decode("utf-8"))
+            finally:
+                outside.unlink(missing_ok=True)
+
+    def test_podcast_audio_rejects_bad_extension_and_catalog_path_escape(self):
+        service = load_service_module()
+        with tempfile.TemporaryDirectory() as directory, patch.object(service, "PODCAST_ROOT", Path(directory)):
+            root = Path(directory)
+            (root / "audio.txt").write_bytes(self.WAV_BYTES)
+            bad_extension = {**service.PODCAST_CATALOG["2"], "filename": "audio.txt"}
+            with patch.dict(service.PODCAST_CATALOG, {"2": bad_extension}):
+                status, _, body = handle_http(service, "/api/podcasts/2/audio", {})
+            self.assertEqual(404, status)
+
+            outside = root.parent / "escaped.wav"
+            outside.write_bytes(self.WAV_BYTES)
+            try:
+                escaped = {**service.PODCAST_CATALOG["2"], "filename": "../escaped.wav"}
+                with patch.dict(service.PODCAST_CATALOG, {"2": escaped}):
+                    status, _, body = handle_http(service, "/api/podcasts/2/audio", {})
+                self.assertEqual(404, status)
+                self.assertNotIn(str(outside), body.decode("utf-8"))
+            finally:
+                outside.unlink(missing_ok=True)
 
 
 class LauncherTests(unittest.TestCase):
