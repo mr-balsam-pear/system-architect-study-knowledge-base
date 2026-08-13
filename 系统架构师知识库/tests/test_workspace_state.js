@@ -12,5 +12,10 @@ store.patch('knowledge', { expandedChapters: ['7', '8'] });
 assert.deepStrictEqual(store.read('knowledge'), { activeId: '7.3.4', query: '黑板系统', scrollTop: 320, expandedChapters: ['7', '8'] });
 const knowledgeSource = require('fs').readFileSync(require('path').join(__dirname, '../site/workspaces/knowledge.js'), 'utf8');
 assert.match(knowledgeSource, /context\.state\.patch\('knowledge'/);
+store.patch('knowledge', { sidebarCollapsed: true });
+assert.strictEqual(store.read('knowledge').sidebarCollapsed, true);
+assert.match(knowledgeSource, /sidebarCollapsed/);
+assert.match(knowledgeSource, /aria-expanded/);
+assert.match(knowledgeSource, /aria-controls/);
 
 console.log('workspace-state tests: OK');

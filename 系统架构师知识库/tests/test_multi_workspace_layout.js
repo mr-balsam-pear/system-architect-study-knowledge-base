@@ -26,5 +26,12 @@ assert.match(dialogs, /createDialogController/);
 assert.match(dialogs, /returnFocus/);
 assert.match(dialogs, /dirty/);
 assert.match(dialogs, /requestClose/);
+const knowledge = fs.readFileSync(path.join(siteRoot, 'workspaces', 'knowledge.js'), 'utf8');
+const practice = fs.readFileSync(path.join(siteRoot, 'workspaces', 'practice.js'), 'utf8');
+const detail = fs.readFileSync(path.join(siteRoot, 'workspaces', 'question-detail.js'), 'utf8');
+assert.match(knowledge, /data-knowledge-rail-toggle/);
+assert.match(knowledge, /id="knowledge-rail"/);
+assert.match(practice, /practice-index-rail/);
+assert.match(detail, /question-related-rail/);
 
 console.log('multi-workspace layout tests: OK');
