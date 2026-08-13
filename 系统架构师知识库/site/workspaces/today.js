@@ -1,5 +1,5 @@
 (function (root) {
-  let view;
+  let view; let generation = 0;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   async function dashboard() {
     try { const response = await fetch('/api/study/dashboard', { headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error(); return response.json(); }
@@ -7,8 +7,9 @@
   }
   root.TodayWorkspace = {
     async mount(container, context) {
+      const current = ++generation;
       const data = await dashboard();
-      if (!container.isConnected) return;
+      if (current !== generation || !container.isConnected) return;
       const due = data.due_reviews || []; const recent = data.recent_records || [];
       const next = due[0]; const last = recent[0]; const podcast = context.podcast?.snapshot?.();
       view = document.createElement('section'); view.className = 'workspace-view today-workspace';
@@ -20,6 +21,6 @@
       view.querySelector('[data-record]').addEventListener('click', event => context.dialogs.openStudyRecord({ type: '知识点学习', knowledgeId: next?.knowledge_id, title: next?.knowledge_title || '今日判断规则' }, event.currentTarget));
       container.append(view);
     },
-    unmount() { view = null; },
+    unmount() { generation += 1; view = null; },
   };
 }(globalThis));

@@ -68,17 +68,18 @@
     workspaceRoot.replaceChildren();
     const workspace = workspaces.get(route.name) || workspaces.get('today');
     active = workspace;
+    updateActiveNavigation(route.name === 'question-detail' ? 'questions' : route.name);
+    document.title = `${titles[route.name] || titles.today} · 系统架构设计师`;
     try {
       await workspace.mount(workspaceRoot, { ...context, route });
       if (epoch !== renderEpoch) return;
     } catch (_) {
+      if (epoch !== renderEpoch) return;
       const error = document.createElement('section');
       error.className = 'workspace-error';
       error.innerHTML = `<h1>${titles[route.name] || '今日指挥台'}</h1><p>工作区暂时无法加载，请稍后重试。</p>`;
       workspaceRoot.append(error);
     }
-    updateActiveNavigation(route.name === 'question-detail' ? 'questions' : route.name);
-    document.title = `${titles[route.name] || titles.today} · 系统架构设计师`;
     workspaceRoot.focus({ preventScroll: true });
   }
 

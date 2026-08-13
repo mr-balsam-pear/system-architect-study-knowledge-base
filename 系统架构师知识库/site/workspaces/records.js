@@ -1,9 +1,71 @@
 (function (root) {
   let view;
-  const el = (tag, cls, text) => { const node = document.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; };
-  const block = (title, count) => { const section = el('section', 'records-block'); const head = el('header'); head.append(el('h2', '', title), el('strong', '', String(count))); section.append(head); return section; };
-  root.RecordsWorkspace = { async mount(container, context) { view = el('section', 'workspace-view records-workspace'); view.innerHTML = `<header class="workspace-heading records-heading"><div><p class="eyebrow">APPEND ONLY · MARKDOWN ARCHIVE</p><h1>学习档案</h1><p>到期复习、近期记录与薄弱专题在这里形成下一轮行动。</p></div><button class="button" type="button" data-new>记录学习</button></header><p class="records-state" aria-live="polite">正在读取本机档案…</p><div class="records-layout"></div>`; container.append(view); view.querySelector('[data-new]').onclick = event => context.dialogs.openStudyRecord({ type: '知识点学习' }, event.currentTarget);
-      try { const response = await fetch('/api/study/dashboard', { headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error(); const data = await response.json(); if (!view) return; const layout = view.querySelector('.records-layout'); const due = block('到期复习', (data.due_reviews || []).length); due.classList.add('records-primary'); (data.due_reviews || []).forEach(item => { const button = el('button', 'record-line'); button.append(el('strong', '', `${item.knowledge_id} ${item.knowledge_title || ''}`), el('span', '', `应复习 ${item.review_date}`)); button.onclick = () => { context.state.patch('knowledge', { activeId: item.knowledge_id }); context.navigate('knowledge'); }; due.append(button); }); if (due.children.length === 1) { const empty = el('div', 'empty-state'); empty.append(el('p', '', '今天没有到期复习。')); const link = el('a', 'quiet-action', '去做一组练习 →'); link.href = '#/practice'; empty.append(link); due.append(empty); }
-        const recent = block('近期记录', (data.recent_records || []).length); (data.recent_records || []).forEach(item => recent.append(el('div', 'record-line static', `${item.knowledge_id} ${item.knowledge_title || item.title || ''} · ${item.type} · ${item.result || '未填写'}`))); const weak = block('薄弱专题', (data.weak_topics || []).length); (data.weak_topics || []).forEach(item => { const button = el('button', 'record-line'); button.append(el('strong', '', `${item.knowledge_id} ${item.title}`), el('span', '', `${item.count} 次 · ${(item.errors || []).join('、') || '待归因'}`)); button.onclick = () => { context.state.patch('knowledge', { activeId: item.knowledge_id }); context.navigate('knowledge'); }; weak.append(button); }); const essay = block('论文素材', data.essay_material_count || 0); essay.append(el('p', 'muted', '素材必须关联真实项目、决策、取舍和验证。')); const add = el('button', 'quiet-action', '记录论文素材 →'); add.onclick = event => context.dialogs.openStudyRecord({ type: '论文素材', title: '论文项目素材', subject: '论文' }, event.currentTarget); essay.append(add); layout.append(due, recent, weak, essay); view.querySelector('.records-state').textContent = `共 ${data.record_count || 0} 条记录；数据来自本机 Markdown。`; }
-      catch (_) { if (view) view.querySelector('.records-state').textContent = '未连接本地学习服务，档案暂不可读。'; } }, unmount() { view = null; } };
+  let generation = 0;
+  const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const block = (title, count) => {
+    const section = el('section', 'records-block');
+    const head = el('header');
+    head.append(el('h2', '', title), el('strong', '', String(count)));
+    section.append(head);
+    return section;
+  };
+
+  root.RecordsWorkspace = {
+    async mount(container, context) {
+      const current = ++generation;
+      view = el('section', 'workspace-view records-workspace');
+      view.innerHTML = `<header class="workspace-heading records-heading"><div><p class="eyebrow">APPEND ONLY · MARKDOWN ARCHIVE</p><h1>学习档案</h1><p>到期复习、近期记录与薄弱专题在这里形成下一轮行动。</p></div><button class="button" type="button" data-new>记录学习</button></header><p class="records-state" data-state="loading" aria-live="polite">正在读取本机档案…</p><div class="records-layout"></div>`;
+      container.append(view);
+      view.querySelector('[data-new]').onclick = event => context.dialogs.openStudyRecord({ type: '知识点学习' }, event.currentTarget);
+      try {
+        const response = await fetch('/api/study/dashboard', { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (current !== generation || !view) return;
+        const layout = view.querySelector('.records-layout');
+        const due = block('到期复习', (data.due_reviews || []).length);
+        due.classList.add('records-primary');
+        (data.due_reviews || []).forEach(item => {
+          const button = el('button', 'record-line');
+          button.append(el('strong', '', `${item.knowledge_id} ${item.knowledge_title || ''}`), el('span', '', `应复习 ${item.review_date}`));
+          button.onclick = () => { context.state.patch('knowledge', { activeId: item.knowledge_id }); context.navigate('knowledge'); };
+          due.append(button);
+        });
+        if (due.children.length === 1) {
+          const empty = el('div', 'empty-state');
+          empty.append(el('p', '', '今天没有到期复习。'));
+          const link = el('a', 'quiet-action', '去做一组练习 →');
+          link.href = '#/practice';
+          empty.append(link); due.append(empty);
+        }
+        const recent = block('近期记录', (data.recent_records || []).length);
+        (data.recent_records || []).forEach(item => recent.append(el('div', 'record-line static', `${item.knowledge_id} ${item.knowledge_title || item.title || ''} · ${item.type} · ${item.result || '未填写'}`)));
+        const weak = block('薄弱专题', (data.weak_topics || []).length);
+        (data.weak_topics || []).forEach(item => {
+          const button = el('button', 'record-line');
+          button.append(el('strong', '', `${item.knowledge_id} ${item.title}`), el('span', '', `${item.count} 次 · ${(item.errors || []).join('、') || '待归因'}`));
+          button.onclick = () => { context.state.patch('knowledge', { activeId: item.knowledge_id }); context.navigate('knowledge'); };
+          weak.append(button);
+        });
+        const essay = block('论文素材', data.essay_material_count || 0);
+        essay.append(el('p', 'muted', '素材必须关联真实项目、决策、取舍和验证。'));
+        const add = el('button', 'quiet-action', '记录论文素材 →');
+        add.onclick = event => context.dialogs.openStudyRecord({ type: '论文素材', title: '论文项目素材', subject: '论文' }, event.currentTarget);
+        essay.append(add); layout.append(due, recent, weak, essay);
+        const status = view.querySelector('.records-state');
+        status.dataset.state = 'success'; status.textContent = `共 ${data.record_count || 0} 条记录；数据来自本机 Markdown。`;
+      } catch (_) {
+        if (current === generation && view) {
+          const status = view.querySelector('.records-state');
+          status.dataset.state = 'error'; status.textContent = '未连接本地学习服务，档案暂不可读。';
+        }
+      }
+    },
+    unmount() { generation += 1; view = null; },
+  };
 }(globalThis));

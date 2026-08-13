@@ -17,6 +17,9 @@
 .study-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xs); margin-block: var(--space-md); }
 .study-form-grid label { display: grid; gap: var(--space-3xs); color: var(--color-ink-2); font-weight: 700; }
 .study-form-grid input, .study-form-grid select, .study-form-grid textarea { width: 100%; min-width: 0; min-height: 2.75rem; padding: var(--space-xs); border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper); color: var(--color-ink); }
+.study-form-grid input, .study-form-grid select, .study-form-grid textarea { outline: 2px solid transparent; outline-offset: 1px; }
+.study-form-grid input:hover, .study-form-grid select:hover, .study-form-grid textarea:hover { background: var(--color-paper-3); }
+.study-form-grid input:disabled, .study-form-grid select:disabled, .study-form-grid textarea:disabled { opacity: .55; cursor: not-allowed; color: var(--color-disabled); }
 .study-form-grid textarea { min-height: 7rem; }
 .study-form-grid .span-two { grid-column: 1 / -1; }
 @media (max-width: 30rem) {
