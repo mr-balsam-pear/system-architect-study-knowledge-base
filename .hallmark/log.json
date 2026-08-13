@@ -6,6 +6,15 @@
     "theme": "custom night command",
     "theme_axes": "dark / geometric-sans / warm",
     "enrichment": "none",
+    "brief": "editorial reflow / medium density / collapsible rail"
+  },
+  {
+    "date": "2026-08-13",
+    "scope": "app",
+    "macrostructure": "Workbench",
+    "theme": "custom night command",
+    "theme_axes": "dark / geometric-sans / warm",
+    "enrichment": "none",
     "brief": "系统架构师知识库多工作区夜航指挥台"
   }
 ]

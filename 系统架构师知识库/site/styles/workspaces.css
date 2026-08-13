@@ -3,6 +3,7 @@
 .workspace-heading, .workspace-hero { display: flex; align-items: end; justify-content: space-between; gap: var(--space-xl); margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-rule); }
 .workspace-heading > div, .workspace-hero > div { min-width: 0; }
 .workspace-heading h1, .workspace-hero h1 { max-width: 14ch; margin: var(--space-2xs) 0; font-size: var(--text-display); line-height: .98; letter-spacing: -.045em; }
+.workspace-heading h1, .workspace-hero h1, .point-title, .podcast-player-panel h2, .training-primary h2 { min-width: 0; overflow-wrap: anywhere; }
 .workspace-heading > p, .workspace-hero > div > p:last-child { max-width: 62ch; margin: 0; color: var(--color-ink-2); }
 .eyebrow, .signal-label { color: var(--color-accent); font: 850 var(--text-xs)/1.3 var(--font-body); letter-spacing: .12em; text-transform: uppercase; }
 .button, .primary-action, .quiet-action, .back-link, .nav-point { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0 var(--space-sm); border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper-3); color: var(--color-ink); font-weight: 850; text-decoration: none; cursor: pointer; white-space: nowrap; transition: transform var(--dur-short) var(--ease-out), background-color var(--dur-short) var(--ease-out); }
@@ -154,7 +155,8 @@
 .exam-card { border: 0; border-right: 1px solid var(--color-rule); background: transparent; }
 .exam-card:last-child { border-right: 0; }
 .practice-layout { grid-template-columns: minmax(13rem, .48fr) minmax(0, 1.7fr); gap: var(--space-lg); }
-.practice-layout > aside { position: sticky; top: var(--space-sm); }
+.practice-index-rail { position: sticky; top: var(--space-sm); min-width: 0; }
+.mobile-filter-trigger, .practice-filter-heading, .practice-filter-backdrop { display: none; }
 .practice-reader { max-width: var(--reading-measure); padding: var(--space-lg); }
 .question-index { grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--color-rule); }
 .question-record { display: grid; grid-template-columns: minmax(8rem, .32fr) minmax(0, 1.7fr) auto; gap: var(--space-md); align-items: center; padding: var(--space-md) 0; border: 0; border-bottom: 1px solid var(--color-rule); background: transparent; }
@@ -162,7 +164,10 @@
 .question-record h2, .question-record p { margin: 0; }
 .question-record .quiet-action { grid-column: 3; grid-row: 1 / span 2; }
 .question-detail-layout { grid-template-columns: minmax(0, 2.2fr) minmax(15rem, .62fr); gap: var(--space-lg); }
+.related-rail-toggle { justify-self: start; }
 .related-panel { padding-left: var(--space-md); border-left: 1px solid var(--color-rule); }
+.question-detail-workspace.is-related-collapsed .question-detail-layout { grid-template-columns: minmax(0, 1fr); }
+.question-detail-workspace.is-related-collapsed .question-related-rail { display: none; }
 .podcast-layout { grid-template-columns: minmax(13rem, .48fr) minmax(0, 1.7fr); gap: var(--space-lg); }
 .podcast-library { padding: var(--space-sm) 0; border: 0; border-top: 1px solid var(--color-rule); background: transparent; }
 .podcast-player-panel { min-height: 30rem; padding: var(--space-xl); border: 0; border-top: .25rem solid var(--color-accent); }
@@ -178,7 +183,7 @@
 @media (max-width: 64rem) {
   .knowledge-toolbar { grid-template-columns: auto minmax(0, 1fr); }
   .reader-layout, .practice-layout, .question-detail-layout, .podcast-layout, .records-layout, .training-primary { grid-template-columns: 1fr; }
-  .practice-layout > aside, .related-panel { position: static; }
+  .practice-index-rail, .related-panel { position: static; }
   .question-record { grid-template-columns: minmax(7rem, .35fr) minmax(0, 1fr); }
   .question-record .quiet-action { grid-column: 2; grid-row: auto; justify-self: start; }
 }
@@ -195,6 +200,8 @@
   .question-record { display: block; }
   .question-record h2 { margin-block: var(--space-xs) var(--space-3xs); }
   .question-record .quiet-action { margin-top: var(--space-xs); }
+  .related-rail-toggle { display: none; }
+  .question-detail-workspace.is-related-collapsed .question-related-rail { display: block; }
   .related-panel { padding-left: 0; border-left: 0; border-top: 1px solid var(--color-rule); }
   .podcast-player-panel, .practice-reader { min-height: auto; padding: var(--space-md); }
   .training-secondary { grid-template-columns: 1fr; }

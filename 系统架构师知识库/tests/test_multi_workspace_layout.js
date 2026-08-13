@@ -31,7 +31,13 @@ const practice = fs.readFileSync(path.join(siteRoot, 'workspaces', 'practice.js'
 const detail = fs.readFileSync(path.join(siteRoot, 'workspaces', 'question-detail.js'), 'utf8');
 assert.match(knowledge, /data-knowledge-rail-toggle/);
 assert.match(knowledge, /id="knowledge-rail"/);
-assert.match(practice, /practice-index-rail/);
-assert.match(detail, /question-related-rail/);
+assert.match(practice, /class="\$\{practiceIndexRailClass\}"/);
+assert.match(practice, /id="practice-filter-panel"/);
+assert.match(practice, /aria-controls="practice-filter-panel"/);
+assert.match(detail, /id="question-related-rail" class="related-panel \$\{questionRelatedRailClass\}"/);
+assert.match(detail, /aria-controls="question-related-rail"/);
+assert.match(detail, /aria-expanded="true"/);
+const podcasts = fs.readFileSync(path.join(siteRoot, 'workspaces', 'podcasts.js'), 'utf8');
+assert.match(podcasts, /podcast-index-rail/);
 
 console.log('multi-workspace layout tests: OK');
