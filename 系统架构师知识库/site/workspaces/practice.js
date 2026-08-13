@@ -1,4 +1,5 @@
 (function (root) {
+  const practiceIndexRailClass = 'practice-index-rail';
   let view; let context; let summaries = []; let cache = new Map(); let session; let activeId = ''; let ticker = 0;
   const el = (tag, cls, text) => { const node = document.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; };
   const typeName = type => ({ single_choice: '选择题', case_analysis: '案例分析', essay: '论文' }[type] || type);

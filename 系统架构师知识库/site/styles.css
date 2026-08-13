@@ -1,8 +1,8 @@
-/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V5
  * genre: atmospheric · macrostructure: Workbench · tone: technical / austere · anchor hue: amber
  * theme: custom night command · nav: N3 side-rail · footer: none (application shell)
  * contrast: pass (40–41) · slop: pass (42–45) · honest/chrome/tokens: pass (46–48)
- * responsive/mobile: pass (34, 49–57) · enrichment: none
+ * responsive/mobile: pass (34, 49–57) · editorial reflow / medium density / collapsible rail
  */
 @import url("styles/app-shell.css");
 @import url("styles/workspaces.css");

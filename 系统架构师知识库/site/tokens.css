@@ -45,6 +45,12 @@
   --sidebar-width: 14rem;
   --mobile-bar-height: 4rem;
   --content-max: 78rem;
+  --reading-measure: 68rem;
+  --prose-measure: 68ch;
+  --rail-width: 15rem;
+  --rail-collapsed: 3.5rem;
+  --player-safe-space: 7.5rem;
+  --workspace-gutter: clamp(1rem, 3vw, 3rem);
   --z-sidebar: 30;
   --z-overlay: 60;
   --dur-short: 160ms;
