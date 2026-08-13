@@ -6,6 +6,14 @@
   function createSession(questionIds, limitMinutes = 0, now = Date.now()) {
     return { questionIds: [...questionIds], answers: {}, submitted: {}, startedAt: now, limitMinutes: Math.max(0, Number(limitMinutes) || 0), finishedAt: 0 };
   }
+  function restoreSession(raw) {
+    const value = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    const session = createSession(Array.isArray(value.questionIds) ? value.questionIds.filter(id => typeof id === 'string') : [], value.limitMinutes, Number(value.startedAt) || Date.now());
+    session.answers = value.answers && typeof value.answers === 'object' && !Array.isArray(value.answers) ? JSON.parse(JSON.stringify(value.answers)) : {};
+    session.submitted = value.submitted && typeof value.submitted === 'object' && !Array.isArray(value.submitted) ? JSON.parse(JSON.stringify(value.submitted)) : {};
+    session.finishedAt = Number(value.finishedAt) || 0;
+    return session;
+  }
   function setAnswer(session, questionId, value) {
     session.answers[questionId] = value;
     return session;
@@ -73,5 +81,5 @@
       missedKeywords: String(values.body || '').slice(0, 600), rule: String(values.solution || '').slice(0, 800) };
   }
   function recordIntent(action) { return action ? { ...action } : null; }
-  return { createSession, setAnswer, progress, remainingSeconds, formatSeconds, summarize, submitSnapshot, reviewData, caseRecordIntent, essayRecordIntent, recordIntent };
+  return { createSession, restoreSession, setAnswer, progress, remainingSeconds, formatSeconds, summarize, submitSnapshot, reviewData, caseRecordIntent, essayRecordIntent, recordIntent };
 }));

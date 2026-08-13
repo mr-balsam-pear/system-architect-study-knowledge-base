@@ -11,6 +11,10 @@ assert.match(
   /href="tokens\.css"[\s\S]*href="styles\.css"/,
   '设计令牌必须先于组件样式加载',
 );
+assert.match(html, /id="mobile-theme-toggle"[^>]+data-theme-toggle[^>]+aria-pressed="false"[^>]+aria-label="切换到黑夜模式"/);
+assert.match(html, /id="workspace-menu"[^>]+aria-controls="workspace-drawer"[^>]+aria-expanded="false"/);
+assert.match(app, /querySelectorAll\('\[data-theme-toggle\]'\)/);
+assert.match(app, /drawer\.addEventListener\('close'[\s\S]+?menu\.focus\(\)/);
 
 assert.match(
   html,

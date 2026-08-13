@@ -50,4 +50,10 @@ const essayIntent = state.essayRecordIntent({ abstract: '摘要', project: '背�
 assert.deepEqual({ projectCode: essayIntent.projectCode, decision: essayIntent.decision, tradeoff: essayIntent.tradeoff, outcome: essayIntent.outcome }, { projectCode: 'P1', decision: '方案', tradeoff: '取舍', outcome: '效果' });
 assert.equal(state.recordIntent(null), null);
 assert.deepEqual(state.recordIntent({ type: '真题', result: '正确' }), { type: '真题', result: '正确' });
+const restored = state.restoreSession(JSON.parse(JSON.stringify(session)));
+assert.deepEqual(restored.questionIds, session.questionIds);
+assert.deepEqual(restored.answers, session.answers);
+assert.equal(restored.startedAt, session.startedAt);
+assert.equal(restored.finishedAt, session.finishedAt);
+assert.equal(restored.limitMinutes, session.limitMinutes);
 console.log('practice-state tests: OK');
