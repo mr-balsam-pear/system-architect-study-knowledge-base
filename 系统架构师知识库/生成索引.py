@@ -75,7 +75,13 @@ def write_csv(rows, output_path: Path):
 
 
 def write_js(rows, output_path: Path):
-    site_rows = [{key: row[key] for key in ("id", "year", "session", "subject", "material_type", "title", "absolute_path", "status")} for row in rows]
+    """写入站点索引。
+
+    ``site/data.js`` 属于公开仓库的一部分，只保留可在页面展示的元数据；
+    本机绝对路径仅保留在私有的 ``02-真题索引/真题台账.csv``，
+    由 ``test_public_data_does_not_expose_absolute_path`` 锁定该边界。
+    """
+    site_rows = [{key: row[key] for key in ("id", "year", "session", "subject", "material_type", "title", "status")} for row in rows]
     payload = "window.KNOWLEDGE_BASE_DATA = " + json.dumps(site_rows, ensure_ascii=False, indent=2) + ";\n"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(payload, encoding="utf-8")

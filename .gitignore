@@ -14,7 +14,10 @@ docs/superpowers/
 *.wav
 系统架构师知识库/真题台账私有.json
 系统架构师知识库/02-真题索引/真题台账.csv
-系统架构师知识库/题库数据/待核对/*.json
+
+# 待核对层：整目录排除。此前的 `待核对/*.json` 只匹配一层，
+# 会让 待核对/外部题库/ 等子目录下的第三方题目正文泄漏到公开仓库。
+系统架构师知识库/题库数据/待核对/
 
 # Generated source-specific knowledge exports; regenerate locally from licensed sources
 系统架构师知识库/site/knowledge-data.js

@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -260,16 +262,69 @@ class ReviewBatchTests(unittest.TestCase):
 
     def test_cli_review_action_dispatches_without_promoting(self):
         output = io.StringIO()
+        # 用 os-native 的路径断言：Windows 上 str(Path(...)) 是反斜杠形式。
+        review_path = Path("/tmp/review.json")
         with patch.object(sys, "argv", ["导入题库.py", "--action", "review", "--batch-file", "/tmp/batch.json", "--candidate-id", "q002:choice-01"]), patch.object(
-            self.importer, "create_review_file", return_value=Path("/tmp/review.json")
+            self.importer, "create_review_file", return_value=review_path
         ) as create, contextlib.redirect_stdout(output):
             self.importer.main()
         create.assert_called_once_with(Path("/tmp/batch.json"), candidate_id="q002:choice-01")
-        self.assertIn("/tmp/review.json", output.getvalue())
+        self.assertIn(str(review_path), output.getvalue())
 
     @staticmethod
     def _points():
         return [{"id": "7.3.4", "title": "以数据为中心的体系结构风格"}]
+
+
+class GitIgnoreBoundaryTests(unittest.TestCase):
+    """锁定公开仓库边界：待核对层必须整目录忽略，已核对层必须保持跟踪。
+
+    回归背景：``待核对/*.json`` 只匹配一层，导致
+    ``待核对/外部题库/xxx.json`` 这类子目录下的第三方题目正文会被 git 看到。
+    """
+
+    def setUp(self):
+        self.repo_root = KNOWLEDGE_ROOT.parent
+        self.gitignore = self.repo_root / ".gitignore"
+        self.assertTrue(self.gitignore.is_file(), "缺少 .gitignore")
+
+    def _patterns(self) -> list[str]:
+        return [
+            line.strip()
+            for line in self.gitignore.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+
+    def test_review_queue_is_ignored_at_every_depth(self):
+        patterns = self._patterns()
+        self.assertTrue(
+            any(pattern.rstrip("/") == "系统架构师知识库/题库数据/待核对" for pattern in patterns),
+            "待核对目录必须整体忽略，避免子目录下的第三方题目正文进入公开仓库",
+        )
+
+    def test_verified_bank_is_not_ignored(self):
+        for pattern in self._patterns():
+            self.assertNotIn(
+                "已核对", pattern,
+                f"已核对题库不能被忽略：{pattern}",
+            )
+
+    def test_gitignore_covers_review_queue_subdirectories(self):
+        """用真实的 git 判定，确认待核对层的多级子目录都在忽略范围内。"""
+        if shutil.which("git") is None:
+            self.skipTest("环境缺少 git")
+        samples = [
+            "系统架构师知识库/题库数据/待核对/q001-20260101-000000.json",
+            "系统架构师知识库/题库数据/待核对/外部题库/external.json",
+            "系统架构师知识库/题库数据/待核对/人工核对/draft.json",
+            "系统架构师知识库/题库数据/待核对/导入批次台账.json",
+        ]
+        for sample in samples:
+            result = subprocess.run(
+                ["git", "check-ignore", "-q", sample],
+                cwd=self.repo_root, capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, f"未被忽略，存在泄漏风险：{sample}")
 
 
 if __name__ == "__main__":

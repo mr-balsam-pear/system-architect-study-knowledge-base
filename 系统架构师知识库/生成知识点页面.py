@@ -26,6 +26,7 @@ SECTION_RE = re.compile(r"^###\s+(\d+\.\d+)\s+(.+?)\s*$")
 SUBSECTION_RE = re.compile(r"^\s*-\s+(\d+(?:\.\d+){2,})\s+(.+?)\s*$")
 REVIEW_RE = re.compile(r"^\s*-\s+复习要点：\s*(.*)$")
 BODY_RE = re.compile(r"^\s*-\s+教材正文：\s*(.*)$")
+OUTLINE_RE = re.compile(r"^\s*-\s+考点提示：\s*(.*)$")
 SOURCE_RE = re.compile(r"^>\s*来源：`?([^`；]+)`?")
 
 
@@ -89,6 +90,8 @@ def enrich(record: dict) -> None:
     }
     tags = [record["chapter_title"], record["section_title"], record["title"]]
     tags.extend(re.findall(r"[A-Za-z][A-Za-z0-9+./-]{1,}|[\u4e00-\u9fff]{2,6}", record["summary"]))
+    # \u8003\u7eb2\u6761\u76ee\u5305\u542b\u5927\u91cf\u89c4\u8303\u672f\u8bed\uff0c\u7eb3\u5165\u6807\u7b7e\u53ef\u663e\u8457\u63d0\u5347\u641c\u7d22\u547d\u4e2d\u7387\u3002
+    tags.extend(re.findall(r"[A-Za-z][A-Za-z0-9+./-]{1,}|[\u4e00-\u9fff]{2,6}", record.get("outline", "")))
     record["tags"] = list(OrderedDict.fromkeys(tags))[:18]
     if source:
         items = "".join(f"<li>{html.escape(item)}</li>" for item in source)
@@ -118,7 +121,7 @@ def parse_file(path: Path) -> dict:
             continue
         if match := SECTION_RE.match(line):
             current_section = {
-                "id": match.group(1), "title": match.group(2), "review": "", "body": "", "children": [],
+                "id": match.group(1), "title": match.group(2), "review": "", "outline": "", "body": "", "children": [],
                 "source": source_ref,
             }
             sections.append(current_section)
@@ -128,14 +131,21 @@ def parse_file(path: Path) -> dict:
             if current_section is None:
                 continue
             current_point = {
-                "id": match.group(1), "title": match.group(2), "review": "", "body": "", "children": [],
+                "id": match.group(1), "title": match.group(2), "review": "", "outline": "", "body": "", "children": [],
                 "source": source_ref,
             }
             current_section["children"].append(current_point)
             continue
         if match := REVIEW_RE.match(line):
-            if current_section:
+            # 子节点的复习要点缩进更深，归属最近的节点而不是一级节。
+            if current_point is not None and current_point is not current_section:
+                current_point["review"] = match.group(1).strip()
+            elif current_section:
                 current_section["review"] = match.group(1).strip()
+            continue
+        if match := OUTLINE_RE.match(line):
+            if current_point is not None:
+                current_point["outline"] = match.group(1).strip()
             continue
         if match := BODY_RE.match(line):
             if current_point:
@@ -171,6 +181,7 @@ def normalize_record(chapter: dict, section: dict, point: dict, kind: str) -> di
         "section_title": section["title"],
         "title": point["title"],
         "review": point["review"] or section["review"],
+        "outline": point.get("outline", "") or section.get("outline", ""),
         "source_paragraphs": paragraphs(point["body"]),
         "chapter_source": chapter["source"],
         "kind": kind,
@@ -195,6 +206,16 @@ def point_markdown(record: dict, previous: dict | None, following: dict | None) 
         next_link = f"[{next_label}]({next_target})"
     else:
         next_link = "- 已是当前知识库的最后一个知识点。"
+    outline_block = ""
+    if record.get("outline"):
+        outline_block = f"""
+## 考纲要求
+
+> 摘自《系统架构设计师考试大纲》综合知识科目，用于对照复习范围。
+
+- {record['outline']}
+
+"""
     return f"""# {record['id']} {record['title']}
 
 > 所属：第{record['chapter']}章 {record['chapter_title']} → {record['section']} {record['section_title']}
@@ -202,7 +223,7 @@ def point_markdown(record: dict, previous: dict | None, following: dict | None) 
 ## 核心结论
 
 {record['summary']}
-
+{outline_block}
 ## 结构化理解
 
 {structured}
@@ -290,7 +311,7 @@ def main() -> None:
     for record in records:
         browser_records.append({key: record[key] for key in (
             "id", "chapter", "chapter_title", "section", "section_title", "title", "summary", "structured",
-            "exam_use", "tags", "source_paragraphs", "source_html", "prevId", "nextId", "chapter_source", "markdownPath", "kind",
+            "exam_use", "tags", "outline", "source_paragraphs", "source_html", "prevId", "nextId", "chapter_source", "markdownPath", "kind",
         )})
     SITE_DATA.write_text("window.KNOWLEDGE_POINT_DATA = " + json.dumps(browser_records, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
     print(f"已生成 {len(chapters)} 个章节概览、{len(records)} 个可读知识点页及站点数据。")

@@ -8,5 +8,125 @@
     "year": "",
     "subject": "系统架构设计师",
     "question_type": ""
+  },
+  {
+    "name": "xiaomabenten/system_architect",
+    "url": "https://github.com/xiaomabenten/system_architect",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 8bc0a57c6a）；包含：真题、模拟题、教材与大纲、其他；许可：MIT License；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "i0Ek3/cs-ruankao",
+    "url": "https://github.com/i0Ek3/cs-ruankao",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 476170ca9b）；包含：真题、其他、论文、政策与考务；许可：未声明；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "Nanki-nn/aisoftoj",
+    "url": "https://github.com/Nanki-nn/aisoftoj",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit a70af83017）；包含：其他、攻略与速查；许可：GNU Affero General Public License v3.0；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "wujiaming88/awesome-ruankao",
+    "url": "https://github.com/wujiaming88/awesome-ruankao",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 9923d3efdd）；包含：真题、模拟题、攻略与速查、其他；许可：Other；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "YoungHong1992/ruankao-senior-architecture-designer",
+    "url": "https://github.com/YoungHong1992/ruankao-senior-architecture-designer",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit c467a7cbc1）；包含：教材与大纲、真题、其他；许可：Other；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "PeterGuy326/senior-software-architect-review",
+    "url": "https://github.com/PeterGuy326/senior-software-architect-review",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 7613332418）；包含：其他、真题、练习应用、笔记与知识点；许可：未声明；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "hsiong/Senior-Architect-Exam-Note",
+    "url": "https://github.com/hsiong/Senior-Architect-Exam-Note",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 294d574351）；包含：其他、攻略与速查；许可：GNU Affero General Public License v3.0；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "Zhang-986/ruankao-architect-practice",
+    "url": "https://github.com/Zhang-986/ruankao-architect-practice",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 51217a582b）；包含：练习应用、其他；许可：MIT License；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "longyi-xw/system-architecture-design",
+    "url": "https://github.com/longyi-xw/system-architecture-design",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit fcc28dd469）；包含：笔记与知识点、其他、案例；许可：未声明；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "fausaitalk/System-Architecture",
+    "url": "https://github.com/fausaitalk/System-Architecture",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 0b53de54da）；包含：真题、其他、笔记与知识点；许可：未声明；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "guanshilong/SystemArchitect",
+    "url": "https://github.com/guanshilong/SystemArchitect",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 2635c55204）；包含：其他；许可：未声明；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
+  },
+  {
+    "name": "linfeng56/exam",
+    "url": "https://github.com/linfeng56/exam",
+    "collected_at": "2026-09-19",
+    "access": "public",
+    "note": "公开仓库固定快照（commit 1b7617ce5e）；包含：其他；许可：Apache License 2.0；仅登记来源，不复制其题目正文、答案或解析。",
+    "year": "",
+    "subject": "系统架构设计师",
+    "question_type": ""
   }
 ]

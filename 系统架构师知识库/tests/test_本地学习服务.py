@@ -504,7 +504,12 @@ class PodcastHttpTests(unittest.TestCase):
             outside = root.parent / "outside.wav"
             outside.write_bytes(self.WAV_BYTES)
             try:
-                audio.symlink_to(outside)
+                try:
+                    audio.symlink_to(outside)
+                except (OSError, NotImplementedError) as error:
+                    # Windows 默认不允许创建符号链接（需要管理员或开发者模式）。
+                    # 该平台无法构造此场景，跳过而不是判失败。
+                    self.skipTest(f"当前平台无法创建符号链接：{error}")
                 status, _, body = handle_http(service, "/api/podcasts/2/audio", {})
                 self.assertEqual(404, status)
                 self.assertNotIn(str(outside), body.decode("utf-8"))
