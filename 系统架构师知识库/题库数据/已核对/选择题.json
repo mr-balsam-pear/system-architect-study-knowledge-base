@@ -13,13 +13,27 @@
       "label": "2009 年下半年系统架构设计师综合知识（本机登记 PDF）",
       "url": ""
     },
-    "knowledge_ids": ["2.3.2"],
+    "knowledge_ids": [
+      "2.3.2"
+    ],
     "stem": "计算机系统中硬件层之上的软件通常按照三层来划分。图中的①②③分别表示哪一组？",
     "options": [
-      {"label": "A", "text": "操作系统、应用软件和其他系统软件"},
-      {"label": "B", "text": "操作系统、其他系统软件和应用软件"},
-      {"label": "C", "text": "其他系统软件、操作系统和应用软件"},
-      {"label": "D", "text": "应用软件、其他系统软件和操作系统"}
+      {
+        "label": "A",
+        "text": "操作系统、应用软件和其他系统软件"
+      },
+      {
+        "label": "B",
+        "text": "操作系统、其他系统软件和应用软件"
+      },
+      {
+        "label": "C",
+        "text": "其他系统软件、操作系统和应用软件"
+      },
+      {
+        "label": "D",
+        "text": "应用软件、其他系统软件和操作系统"
+      }
     ],
     "answer": "B",
     "explanation": "操作系统直接建立在硬件之上，是最基础的一层系统软件；编译器、数据库管理系统等其他系统软件依赖操作系统；应用软件建立在系统软件提供的平台之上。答案已与同年度答案解析 PDF 的第 1 题核对。",
@@ -39,16 +53,110 @@
       "label": "知识库自编训练题",
       "url": ""
     },
-    "knowledge_ids": ["7.3.4"],
+    "knowledge_ids": [
+      "7.3.4"
+    ],
     "stem": "某智能诊断系统需要让多个独立知识源围绕共享问题状态逐步推理，以处理复杂且难以预先分解的问题。下列哪种体系结构风格更贴切？",
     "options": [
-      {"label": "A", "text": "固定顺序的批处理管道"},
-      {"label": "B", "text": "单一服务的同步调用"},
-      {"label": "C", "text": "黑板体系结构风格"},
-      {"label": "D", "text": "仅保存文件的仓库风格"}
+      {
+        "label": "A",
+        "text": "固定顺序的批处理管道"
+      },
+      {
+        "label": "B",
+        "text": "单一服务的同步调用"
+      },
+      {
+        "label": "C",
+        "text": "黑板体系结构风格"
+      },
+      {
+        "label": "D",
+        "text": "仅保存文件的仓库风格"
+      }
     ],
     "answer": "C",
     "explanation": "黑板风格通过黑板、独立知识源与控制机制协同求解复杂的非结构化问题；题干强调多知识源逐步推理，符合其典型适用场景。",
     "review_note": "自编训练样例；2026-08-08 人工核对。"
+  },
+  {
+    "id": "xcheck-2024-39",
+    "type": "single_choice",
+    "status": "verified",
+    "title": "2024年上半年 综合知识第 39 题｜在数据库设计的（ ）阶段进行关系反规范化。",
+    "year": "2024",
+    "session": "上半年",
+    "subject": "综合知识",
+    "source": {
+      "kind": "public_repo",
+      "source_id": "xcheck-2024",
+      "label": "2024年上半年 综合知识（多来源交叉核对并经独立验证）",
+      "url": "https://github.com/YoungHong1992/ruankao-senior-architecture-designer"
+    },
+    "knowledge_ids": [
+      "6.3.4"
+    ],
+    "stem": "在数据库设计的（ ）阶段进行关系反规范化。",
+    "options": [
+      {
+        "label": "A",
+        "text": "需求分析"
+      },
+      {
+        "label": "B",
+        "text": "概念设计"
+      },
+      {
+        "label": "C",
+        "text": "逻辑设计"
+      },
+      {
+        "label": "D",
+        "text": "物理设计"
+      }
+    ],
+    "answer": "C",
+    "explanation": "教材第 6.3.4 节“逻辑结构设计”明确把关系反规范化列为逻辑设计阶段的工作。 教材原文：这种修正称之为反规范化设计，反规范化 (Denormalization) 是加速读操作性能(数据检索)的方法，一般用这种方法有选择地在数据结构标准化后添加特定的冗余数据实例。",
+    "review_note": "2026-09-23 以教材第 6.3.4 节原文独立验证本题答案；题干与选项来自公开来源 YoungHong1992，未逐页比对纸质原卷。"
+  },
+  {
+    "id": "xcheck-2021-58",
+    "type": "single_choice",
+    "status": "verified",
+    "title": "2021年下半年 综合知识第 58 题｜非负变量x和y，在x≤4，y≤3和x+2y≤8的",
+    "year": "2021",
+    "session": "下半年",
+    "subject": "综合知识",
+    "source": {
+      "kind": "public_repo",
+      "source_id": "xcheck-2021",
+      "label": "2021年下半年 综合知识（多来源交叉核对并经独立验证）",
+      "url": "https://github.com/YoungHong1992/ruankao-senior-architecture-designer"
+    },
+    "knowledge_ids": [
+      "12.4"
+    ],
+    "stem": "非负变量x和y，在x≤4，y≤3和x+2y≤8的约束条件下，目标函数2x+3y的最大值为（ ）。",
+    "options": [
+      {
+        "label": "A",
+        "text": "13"
+      },
+      {
+        "label": "B",
+        "text": "14"
+      },
+      {
+        "label": "C",
+        "text": "15"
+      },
+      {
+        "label": "D",
+        "text": "16"
+      }
+    ],
+    "answer": "B",
+    "explanation": "线性规划可独立求解：x≤4、y≤3、x+2y≤8 下 2x+3y 最大值为 14，对应选项 B。 独立求解得到最优值 14.0，与选项 B 对应，故采信该答案。",
+    "review_note": "2026-09-23 以程序化线性规划求解独立验证本题答案（线性规划可独立求解：x≤4、y≤3、x+2y≤8 下 2x+3y 最大值为 14…）；题干与选项来自公开来源 YoungHong1992，未逐页比对纸质原卷。"
   }
 ]
